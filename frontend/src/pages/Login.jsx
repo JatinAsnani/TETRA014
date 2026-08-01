@@ -10,7 +10,8 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const { login } = useAuth();
+  const auth = useAuth();
+  const login = auth?.login;
 
   // Validation Error State for Cat reaction
   const [catVideo, setCatVideo] = useState('/cat_login.mp4');
