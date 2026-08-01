@@ -104,6 +104,21 @@ def _format_single_invoice_dict(data: dict, filename: str, idx: int = 0) -> dict
         tax = 7650.0
         total = 50150.0
 
+    SKIP_ITEM_TERMS = [
+        "total", "subtotal", "sub-total", "tax", "vat", "gst", "paid", "amount",
+        "cash", "change", "tender", "balance", "card", "bank card", "credit card", "debit card",
+        "approval", "auth", "net total", "discount", "tip", "gratuity", "thank you", "received",
+        "description", "rate", "qty", "quantity", "particulars"
+    ]
+
+    raw_items = data.get("line_items") or []
+    cleaned_items = []
+    for item in raw_items:
+        if isinstance(item, dict):
+            desc = str(item.get("description", "")).strip().lower()
+            if desc and not any(term == desc or desc.startswith(term + " ") or desc.endswith(" " + term) for term in SKIP_ITEM_TERMS):
+                cleaned_items.append(item)
+
     return {
         "invoice_number": str(inv_no).strip(),
         "invoice_date": str(inv_date).strip(),
@@ -112,7 +127,7 @@ def _format_single_invoice_dict(data: dict, filename: str, idx: int = 0) -> dict
         "taxable_value": taxable,
         "tax_amount": tax,
         "total_amount": total,
-        "line_items": data.get("line_items") or [],
+        "line_items": cleaned_items,
         "notes": f"Extracted from {filename}"
     }
 
@@ -318,7 +333,7 @@ def _extract_via_ocr_space(file_bytes: bytes, mime_type: str, filename: str) -> 
                     line_items = []
                     for line in lines:
                         m = re.search(r"^([A-Za-z\s]{3,20})\s+([\d,]+\.?\d*)$", line)
-                        if m and not any(k in m.group(1).lower() for k in ["total", "price", "tax", "subtotal", "sub-total", "paid", "amount"]):
+                        if m and not any(k in m.group(1).lower() for k in ["total", "price", "tax", "subtotal", "sub-total", "paid", "amount", "cash", "change", "tender", "balance", "card", "approval", "auth"]):
                             amt = float(m.group(2).replace(",", ""))
                             line_items.append({
                                 "description": m.group(1).strip(),
