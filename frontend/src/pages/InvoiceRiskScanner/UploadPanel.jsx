@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { mockSampleInvoices } from '../../api/mockInvoiceRiskData'
+import { uploadInvoice } from '../../api/invoiceRiskApi'
 
 export default function UploadPanel({ onInvoiceExtracted }) {
   const [dragActive, setDragActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [loadingPreset, setLoadingPreset] = useState(null)
+  const [errorMsg, setErrorMsg] = useState(null)
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -33,33 +35,40 @@ export default function UploadPanel({ onInvoiceExtracted }) {
 
   const processFile = async (file) => {
     setLoading(true)
-    setTimeout(() => {
-      onInvoiceExtracted({
-        scanned_invoice_id: `upload-${Date.now()}`,
-        invoice_number: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
-        invoice_date: new Date().toISOString().split('T')[0],
-        vendor_name: file.name.split('.')[0].replace(/[-_]/g, ' '),
-        vendor_gstin: '24ABCDE1234F1Z5',
-        taxable_value: 50000,
-        tax_amount: 9000,
-        total_amount: 59000,
-        file_name: file.name,
-        notes: 'Extracted from uploaded bill document.'
-      })
+    setErrorMsg(null)
+    try {
+      const extracted = await uploadInvoice(file)
+      onInvoiceExtracted(extracted)
+    } catch (err) {
+      console.error('Invoice extraction failed:', err)
+      const msg = err.response?.data?.detail || err.message || 'Invoice extraction failed.'
+      setErrorMsg(msg)
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   const handleSelectPreset = (preset) => {
     setLoadingPreset(preset.scanned_invoice_id)
+    setErrorMsg(null)
     setTimeout(() => {
       onInvoiceExtracted(preset)
       setLoadingPreset(null)
-    }, 400)
+    }, 300)
   }
 
   return (
     <div className="space-y-6">
+      {/* Error Toast / Alert */}
+      {errorMsg && (
+        <div className="bg-rose-950/80 border border-rose-500/50 text-rose-200 text-xs px-4 py-3 rounded-xl flex items-center justify-between shadow-lg">
+          <span className="flex items-center gap-2">
+            <span>⚠️</span> {errorMsg}
+          </span>
+          <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-white font-bold text-sm">✕</button>
+        </div>
+      )}
+
       {/* Upload Zone */}
       <div 
         onDragEnter={handleDrag}
@@ -76,7 +85,7 @@ export default function UploadPanel({ onInvoiceExtracted }) {
           <div className="py-8 flex flex-col items-center justify-center space-y-3">
             <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-slate-300 font-medium">Extracting invoice fields with Gemini AI...</p>
-            <p className="text-slate-500 text-xs">Parsing OCR structure, GSTIN format, taxable totals & line items</p>
+            <p className="text-slate-500 text-xs">Parsing document layout, vendor GSTIN, totals & line items</p>
           </div>
         ) : (
           <div className="py-4 flex flex-col items-center justify-center space-y-3">
@@ -84,8 +93,8 @@ export default function UploadPanel({ onInvoiceExtracted }) {
               📄
             </div>
             <div>
-              <h3 className="text-white font-semibold text-base">Drag & Drop Invoice File</h3>
-              <p className="text-slate-400 text-xs mt-1">Supports PDF, JPG, PNG (Paper bills, GST tax invoices, thermal receipts)</p>
+              <h3 className="text-white font-semibold text-base">Drag & Drop Invoice Document</h3>
+              <p className="text-slate-400 text-xs mt-1">Supports PDF, JPG/PNG, Excel (.xls/.xlsx), CSV, Word (.doc/.docx)</p>
             </div>
             
             <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition-colors">
@@ -93,7 +102,7 @@ export default function UploadPanel({ onInvoiceExtracted }) {
               <input 
                 type="file" 
                 className="hidden" 
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept=".pdf,.jpg,.jpeg,.png,.xls,.xlsx,.csv,.doc,.docx"
                 onChange={handleFileInput}
               />
             </label>

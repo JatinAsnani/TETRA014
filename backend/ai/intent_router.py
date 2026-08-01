@@ -1,46 +1,19 @@
 """
-intent_router.py — Main AI processing pipeline.
-
-Uses Gemini function calling:
-1. User message → GenerativeModel.start_chat().send_message()
-2. If Gemini returns a function_call part → execute_tool() → real DB operation
-3. Send function response back to Gemini for final human-readable reply
-4. Return {reply, action, data}
+intent_router.py — Main AI processing pipeline using Gemini REST API.
+Bypasses native cygrpc DLL restrictions while executing real function calling tools against the DB.
 """
 import os
 from dotenv import load_dotenv
 
-try:
-    import google.generativeai as genai
-    _genai_available = True
-except ImportError:
-    genai = None
-    _genai_available = False
+from ai.system_prompt import SYSTEM_PROMPT
+from ai.tools_definition import REST_FUNCTION_DECLARATIONS
+from ai.gemini_rest import (
+    is_configured,
+    chat_with_gemini_rest,
+    send_function_response_rest
+)
 
-try:
-    from ai.system_prompt import SYSTEM_PROMPT
-    from ai.tools_definition import GEMINI_TOOLS
-    _tools_available = True
-except Exception:
-    SYSTEM_PROMPT = "You are TallAI."
-    GEMINI_TOOLS = None
-    _tools_available = False
-
-load_dotenv()
-
-_api_key = os.environ.get("GEMINI_API_KEY", "")
-_configured = bool(_genai_available and _api_key and _api_key != "YOUR_GEMINI_API_KEY_HERE")
-
-if _configured:
-    genai.configure(api_key=_api_key)
-    _model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        tools=GEMINI_TOOLS,
-        system_instruction=SYSTEM_PROMPT,
-    )
-else:
-    _model = None
-
+load_dotenv(override=True)
 
 # ---------------------------------------------------------------------------
 # Tool execution — calls real DB functions in routers / features
@@ -86,7 +59,6 @@ async def execute_tool(tool_name: str, tool_input: dict, user_id: int, db) -> di
 # ---------------------------------------------------------------------------
 
 def _format_tool_result(data: dict) -> str:
-    """Format a tool result dict into a human-readable Hinglish/English string."""
     if not data or data.get("error"):
         return f"Kuch problem aayi: {data.get('error', 'Unknown error')}"
     if "invoice_number" in data:
@@ -133,11 +105,9 @@ def _format_tool_result(data: dict) -> str:
 
 
 async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
-    """Rule-based fallback when Gemini API key is not set."""
     import re
     msg = user_message.lower()
 
-    # Outstanding check
     if any(w in msg for w in ["outstanding", "baaki", "kitna", "baki"]):
         for name in ["Raj Traders", "Mehta", "Shah", "Patel", "Kumar", "Verma", "Singh", "Gupta"]:
             if name.lower() in msg:
@@ -146,7 +116,6 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
         result = await execute_tool("get_report", {"report_type": "outstanding"}, user_id, db)
         return {"reply": _format_tool_result(result), "action": "get_report", "data": result}
 
-    # Payment recording
     if any(w in msg for w in ["payment", "diya", "received", "paid", "jama"]):
         amount_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", msg)
         amount = float(amount_match.group(1).replace(",", "")) if amount_match else 0
@@ -159,7 +128,6 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
             result = await execute_tool("record_payment", {"customer_name": customer, "amount": amount}, user_id, db)
             return {"reply": _format_tool_result(result), "action": "record_payment", "data": result}
 
-    # Expense recording
     if any(w in msg for w in ["expense", "rent", "kharcha", "kharch", "bijli", "salary"]):
         amount_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", msg)
         amount = float(amount_match.group(1).replace(",", "")) if amount_match else 2000
@@ -167,12 +135,10 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
         result = await execute_tool("add_expense", {"category": category, "amount": amount}, user_id, db)
         return {"reply": _format_tool_result(result), "action": "add_expense", "data": result}
 
-    # Report
     if any(w in msg for w in ["sales", "profit", "report", "pl", "bikri", "income"]):
         result = await execute_tool("get_report", {"report_type": "pl", "period": "this_month"}, user_id, db)
         return {"reply": _format_tool_result(result), "action": "get_report", "data": result}
 
-    # GST
     if "gst" in msg:
         result = await execute_tool("get_gst_summary", {}, user_id, db)
         return {"reply": _format_tool_result(result), "action": "get_gst_summary", "data": result}
@@ -197,81 +163,44 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
 # ---------------------------------------------------------------------------
 
 async def process_chat_message(user_message: str, chat_history: list, user_id: int, db) -> dict:
-    """
-    Process a user chat message:
-    1. If Gemini model available → use function calling
-    2. Otherwise → keyword-based fallback
-    """
-    if _model is None:
+    if not is_configured():
         return await _keyword_fallback(user_message, user_id, db)
 
     try:
-        # Build Gemini-format history (last 10 messages to stay within token limit)
-        gemini_history = []
-        for msg in chat_history[-10:]:
-            role = "user" if msg.get("role") == "user" else "model"
-            content = msg.get("content", msg.get("message", ""))
-            if content:
-                gemini_history.append({"role": role, "parts": [content]})
+        res = chat_with_gemini_rest(
+            user_message=user_message,
+            chat_history=chat_history,
+            tools_declarations=REST_FUNCTION_DECLARATIONS,
+            system_instruction=SYSTEM_PROMPT
+        )
+        if not res:
+            return await _keyword_fallback(user_message, user_id, db)
 
-        # Start a chat session with history
-        chat = _model.start_chat(history=gemini_history)
+        if res.get("function_call"):
+            fc = res["function_call"]
+            tool_name = fc.get("name")
+            tool_args = fc.get("args", {})
 
-        # Send user message
-        response = chat.send_message(user_message)
+            tool_result = await execute_tool(tool_name, tool_args, user_id, db)
 
-        # Check if Gemini wants to call a tool
-        for part in response.parts:
-            if hasattr(part, "function_call") and part.function_call and part.function_call.name:
-                tool_name = part.function_call.name
-                tool_input = dict(part.function_call.args)
+            final_text = send_function_response_rest(
+                contents_history=res.get("contents_history", []),
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_result=tool_result,
+                system_instruction=SYSTEM_PROMPT
+            )
 
-                # Execute the actual DB operation
-                tool_result = await execute_tool(tool_name, tool_input, user_id, db)
+            if not final_text:
+                final_text = _format_tool_result(tool_result)
 
-                # Send function response back to Gemini for final human-readable answer
-                function_response = chat.send_message(
-                    genai.protos.Content(
-                        parts=[
-                            genai.protos.Part(
-                                function_response=genai.protos.FunctionResponse(
-                                    name=tool_name,
-                                    response={"result": str(tool_result)},
-                                )
-                            )
-                        ]
-                    )
-                )
+            return {"reply": final_text, "action": tool_name, "data": tool_result}
 
-                final_text = ""
-                if hasattr(function_response, "text"):
-                    final_text = function_response.text
-                elif function_response.parts:
-                    for p in function_response.parts:
-                        if hasattr(p, "text"):
-                            final_text = p.text
-                            break
-
-                if not final_text:
-                    final_text = _format_tool_result(tool_result)
-
-                return {"reply": final_text, "action": tool_name, "data": tool_result}
-
-        # Plain text response (no tool call)
-        text = ""
-        if hasattr(response, "text"):
-            text = response.text
-        elif response.parts:
-            for p in response.parts:
-                if hasattr(p, "text"):
-                    text = p.text
-                    break
-
-        return {"reply": text, "action": None, "data": None}
+        if res.get("text"):
+            return {"reply": res["text"], "action": None, "data": None}
 
     except Exception as exc:
-        print(f"[TallAI] Gemini error: {exc}")
-        # Fall back to keyword matching on API errors
-        fallback = await _keyword_fallback(user_message, user_id, db)
-        fallback["reply"] = fallback["reply"] + f"\n\n_(AI unavailable: {str(exc)[:100]})_"
-        return fallback
+        print(f"[TallAI] Gemini REST error: {exc}")
+        return await _keyword_fallback(user_message, user_id, db)
+
+    return await _keyword_fallback(user_message, user_id, db)

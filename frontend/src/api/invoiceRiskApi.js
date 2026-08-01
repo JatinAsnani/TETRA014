@@ -2,26 +2,30 @@ import api from './axios'
 import { mockSampleInvoices, mockExceptions, mockReadinessReport } from './mockInvoiceRiskData'
 
 export async function uploadInvoice(file) {
-  const payload = {
+  if (file && (file instanceof File || file.name)) {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post('/invoice-risk/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return res.data
+  }
+
+  const payload = file || {
     scanned_invoice_id: `upload-${Date.now()}`,
     invoice_number: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
     invoice_date: new Date().toISOString().split('T')[0],
-    vendor_name: file ? file.name.split('.')[0].replace(/[-_]/g, ' ') : 'Sample Vendor',
+    vendor_name: 'Sample Vendor',
     vendor_gstin: '24ABCDE1234F1Z5',
     taxable_value: 50000.00,
     tax_amount: 9000.00,
     total_amount: 59000.00,
-    file_name: file ? file.name : 'uploaded_invoice.pdf',
+    file_name: 'uploaded_invoice.pdf',
     notes: 'Extracted from uploaded bill document.'
   }
 
-  try {
-    const res = await api.post('/invoice-risk/upload', payload)
-    return res.data
-  } catch (err) {
-    console.warn('Backend /invoice-risk/upload failed, using fallback payload:', err)
-    return payload
-  }
+  const res = await api.post('/invoice-risk/upload', payload)
+  return res.data
 }
 
 export async function getPresetInvoice(scannedInvoiceId) {
