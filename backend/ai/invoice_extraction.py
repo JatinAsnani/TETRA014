@@ -11,6 +11,7 @@ import io
 import csv
 import requests
 from datetime import datetime, date
+from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -215,11 +216,135 @@ def _local_fallback_parser(text: str, filename: str) -> list:
     return invoices
 
 
+def _local_image_ocr_parser(file_bytes: bytes, filename: str) -> list:
+    """Extract invoice text directly from images using OCR & pattern recognition."""
+    extracted_text = ""
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(file_bytes))
+        import pytesseract
+        extracted_text = pytesseract.image_to_string(img)
+    except Exception as e:
+        print(f"[invoice_extraction] Image OCR note: {e}")
+
+    if extracted_text and len(extracted_text.strip()) > 5:
+        lines = [line.strip() for line in extracted_text.split("\n") if line.strip()]
+        
+        # Vendor name (first prominent non-generic line)
+        v_name = filename.split(".")[0].replace("_", " ").replace("-", " ").title()
+        for line in lines[:6]:
+            clean_line = re.sub(r"[^\w\s]", "", line).strip()
+            if len(clean_line) > 2 and not any(k in clean_line.lower() for k in ["cash receipt", "tax invoice", "bill", "invoice", "receipt", "welcome", "address"]):
+                v_name = clean_line.title()
+                break
+
+        total_match = re.search(r"(?:total|grand total|amount paid|paid)\s*[:=]?\s*[\$₹Rs\s]*([\d,]+\.\d{2})", extracted_text, re.IGNORECASE)
+        tax_match = re.search(r"(?:tax|vat|gst)\s*[:=]?\s*[\$₹Rs\s]*([\d,]+\.\d{2})", extracted_text, re.IGNORECASE)
+        price_match = re.search(r"(?:price|subtotal|taxable)\s*[:=]?\s*[\$₹Rs\s]*([\d,]+\.\d{2})", extracted_text, re.IGNORECASE)
+        inv_no_match = re.search(r"(?:inv|bill|receipt|no)\.?\s*[:=]?\s*([A-Za-z0-9\-_]+)", extracted_text, re.IGNORECASE)
+        date_match = re.search(r"(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}|\w+\s+\d{1,2},\s+\d{4})", extracted_text)
+
+        total_val = float(total_match.group(1).replace(",", "")) if total_match else 0.0
+        tax_val = float(tax_match.group(1).replace(",", "")) if tax_match else 0.0
+        subtotal_val = float(price_match.group(1).replace(",", "")) if price_match else 0.0
+
+        if total_val > 0:
+            if subtotal_val == 0.0:
+                subtotal_val = round(total_val - tax_val, 2)
+            
+            return [_format_single_invoice_dict({
+                "invoice_number": inv_no_match.group(1) if inv_no_match else f"REC-{abs(hash(filename)) % 9000 + 1000}",
+                "invoice_date": date_match.group(1) if date_match else date.today().isoformat(),
+                "vendor_name": v_name,
+                "vendor_gstin": None,
+                "taxable_value": subtotal_val,
+                "tax_amount": tax_val,
+                "total_amount": total_val,
+                "line_items": [
+                    {"description": f"Items purchased at {v_name}", "quantity": 1, "rate": subtotal_val, "amount": subtotal_val}
+                ],
+                "notes": f"Extracted via Local OCR from {filename}"
+            }, filename, 0)]
+
+    return _local_fallback_parser(filename, filename)
+
+
+def _extract_via_ocr_space(file_bytes: bytes, mime_type: str, filename: str) -> Optional[list]:
+    """Extract document text via high-precision OCR API and parse fields."""
+    try:
+        mtype = mime_type if mime_type and "/" in mime_type else "image/png"
+        b64_str = f"data:{mtype};base64," + base64.b64encode(file_bytes).decode("utf-8")
+        res = requests.post(
+            "https://api.ocr.space/parse/image",
+            data={
+                "base64Image": b64_str,
+                "apikey": "helloworld",
+                "isTable": "true",
+                "OCREngine": "2"
+            },
+            timeout=15
+        )
+        if res.status_code == 200:
+            parsed_results = res.json().get("ParsedResults", [])
+            if parsed_results:
+                ocr_text = parsed_results[0].get("ParsedText", "")
+                if ocr_text and len(ocr_text.strip()) > 5:
+                    lines = [l.strip() for l in ocr_text.split("\n") if l.strip()]
+
+                    # Vendor name search
+                    v_name = filename.split(".")[0].replace("_", " ").replace("-", " ").title()
+                    for l in lines[:6]:
+                        clean = re.sub(r"[^\w\s]", "", l).strip()
+                        if len(clean) > 2 and not any(k in clean.lower() for k in ["cash receipt", "tax invoice", "bill", "invoice", "receipt", "welcome", "address", "manager", "tel"]):
+                            v_name = clean.title()
+                            break
+
+                    gstin_match = re.search(r"\b(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b", ocr_text, re.IGNORECASE)
+                    total_match = re.search(r"(?:total|grand total|amount paid|paid|amt)\s*[:=]?\s*[\$₹Rs\s]*([\d,]+\.?\d*)", ocr_text, re.IGNORECASE)
+                    tax_match = re.search(r"(?:tax|vat|gst)\s*[:=]?\s*[\$₹Rs\s]*([\d,]+\.?\d*)", ocr_text, re.IGNORECASE)
+                    subtotal_match = re.search(r"(?:price|subtotal|taxable|sub-total)\s*[:=]?\s*[\$₹Rs\s]*([\d,]+\.?\d*)", ocr_text, re.IGNORECASE)
+                    inv_no_match = re.search(r"(?:inv|bill|receipt|ref|no)\.?\s*[:=]?\s*([A-Za-z0-9\-_]+)", ocr_text, re.IGNORECASE)
+                    date_match = re.search(r"(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4})", ocr_text)
+
+                    tot_val = float(total_match.group(1).replace(",", "")) if total_match else 0.0
+                    tax_val = float(tax_match.group(1).replace(",", "")) if tax_match else 0.0
+                    subtotal_val = float(subtotal_match.group(1).replace(",", "")) if subtotal_match else 0.0
+
+                    if tot_val == 0.0 and subtotal_val > 0:
+                        tot_val = round(subtotal_val + tax_val, 2)
+                    elif tot_val > 0 and subtotal_val == 0.0:
+                        subtotal_val = round(tot_val - tax_val, 2)
+
+                    line_items = []
+                    for line in lines:
+                        m = re.search(r"^([A-Za-z\s]{3,20})\s+([\d,]+\.?\d*)$", line)
+                        if m and not any(k in m.group(1).lower() for k in ["total", "price", "tax", "subtotal", "sub-total", "paid", "amount"]):
+                            amt = float(m.group(2).replace(",", ""))
+                            line_items.append({
+                                "description": m.group(1).strip(),
+                                "quantity": 1,
+                                "rate": amt,
+                                "amount": amt
+                            })
+
+                    return [_format_single_invoice_dict({
+                        "invoice_number": inv_no_match.group(1) if inv_no_match else f"REC-{abs(hash(filename)) % 9000 + 1000}",
+                        "invoice_date": date_match.group(1) if date_match else date.today().isoformat(),
+                        "vendor_name": v_name,
+                        "vendor_gstin": gstin_match.group(1).upper() if gstin_match else None,
+                        "taxable_value": subtotal_val,
+                        "tax_amount": tax_val,
+                        "total_amount": tot_val,
+                        "line_items": line_items,
+                        "notes": f"Extracted via High-Accuracy OCR from {filename}"
+                    }, filename, 0)]
+    except Exception as e:
+        print(f"[invoice_extraction] OCR.space exception: {e}")
+    return None
+
+
 def _extract_via_vision(file_bytes: bytes, mime_type: str, filename: str) -> list:
     api_key = _get_api_key()
-    if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
-        return _local_fallback_parser(filename, filename)
-
     b64_data = base64.b64encode(file_bytes).decode("utf-8")
 
     payload = {
@@ -244,25 +369,31 @@ def _extract_via_vision(file_bytes: bytes, mime_type: str, filename: str) -> lis
         }
     }
 
-    for model_name in PREFERRED_MODELS:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        try:
-            res = requests.post(url, json=payload, timeout=30)
-            if res.status_code == 200:
-                result_json = res.json()
-                candidates = result_json.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    raw_text = "".join([p.get("text", "") for p in parts if "text" in p])
-                    extracted = _parse_extracted_json(raw_text, filename)
-                    if extracted:
-                        return extracted
-            else:
-                print(f"[invoice_extraction] Vision model {model_name} status {res.status_code}")
-        except Exception as e:
-            print(f"[invoice_extraction] Vision exception on {model_name}: {e}")
+    if api_key and api_key != "YOUR_GEMINI_API_KEY_HERE":
+        for model_name in PREFERRED_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            try:
+                res = requests.post(url, json=payload, timeout=30)
+                if res.status_code == 200:
+                    result_json = res.json()
+                    candidates = result_json.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        raw_text = "".join([p.get("text", "") for p in parts if "text" in p])
+                        extracted = _parse_extracted_json(raw_text, filename)
+                        if extracted:
+                            return extracted
+                else:
+                    print(f"[invoice_extraction] Vision model {model_name} status {res.status_code}")
+            except Exception as e:
+                print(f"[invoice_extraction] Vision exception on {model_name}: {e}")
 
-    return _local_fallback_parser(filename, filename)
+    # High-Accuracy OCR Engine when Gemini API key rate limit occurs
+    ocr_result = _extract_via_ocr_space(file_bytes, mime_type, filename)
+    if ocr_result:
+        return ocr_result
+
+    return _local_image_ocr_parser(file_bytes, filename)
 
 
 def _extract_via_text_prompt(extracted_text: str, filename: str) -> list:
