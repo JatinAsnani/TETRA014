@@ -100,7 +100,7 @@ export default function Chat() {
             {messages.length === 0 && (
               <div className="text-center py-16 text-gray-400">
                 <p className="text-4xl mb-4">🤖</p>
-                <p className="font-medium text-gray-600">Ask FRIDAY anything</p>
+                <p className="font-medium text-gray-600">Ask TallAI anything</p>
                 <p className="text-sm mt-1">Try: "Raj Traders ka kitna baaki hai?" or "Create invoice for 50 cement bags"</p>
               </div>
             )}

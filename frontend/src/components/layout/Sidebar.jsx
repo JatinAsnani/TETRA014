@@ -4,7 +4,6 @@ const links = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/chat', label: 'AI Chat', icon: '🤖' },
   { to: '/invoices', label: 'Invoices', icon: '📄' },
-  { to: '/invoice-risk-scanner', label: 'Risk Scanner', icon: '🛡️' },
   { to: '/expenses', label: 'Expenses', icon: '💸' },
   { to: '/customers', label: 'Customers', icon: '👥' },
   { to: '/vendors', label: 'Vendors', icon: '🏭' },
@@ -23,7 +22,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     }`}>
       <div className="p-5 border-b border-slate-700 flex items-center justify-between">
         <div>
-          <h1 className="text-white font-bold text-xl">FRIDAY</h1>
+          <h1 className="text-white font-bold text-xl">TallAI</h1>
           <p className="text-slate-400 text-xs mt-0.5">AI Accounting</p>
         </div>
         <button 

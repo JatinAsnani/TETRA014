@@ -1,49 +1,107 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
-import ProtectedRoute from './components/ui/ProtectedRoute'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import Chat from './pages/Chat'
-import Invoices from './pages/Invoices'
-import InvoiceDetail from './pages/InvoiceDetail'
-import InvoiceRiskScanner from './pages/InvoiceRiskScanner'
-import Expenses from './pages/Expenses'
-import Customers from './pages/Customers'
-import CustomerDetail from './pages/CustomerDetail'
-import Vendors from './pages/Vendors'
-import Payments from './pages/Payments'
-import Ledger from './pages/Ledger'
-import Stock from './pages/Stock'
-import Reports from './pages/Reports'
-import GST from './pages/GST'
-import Settings from './pages/Settings'
+import { useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import Navbar from './components/Navbar.jsx';
+import FloatingChat from './components/FloatingChat.jsx';
+
+import InvoiceRiskScanner from './pages/InvoiceRiskScanner/index.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import AIChat from './pages/AIChat.jsx';
+import Invoices from './pages/Invoices.jsx';
+import ScanExtract from './pages/ScanExtract.jsx';
+import Reconciliation from './pages/Reconciliation.jsx';
+import AuditTrail from './pages/AuditTrail.jsx';
+import Expenses from './pages/Expenses.jsx';
+import Customers from './pages/Customers.jsx';
+import Vendors from './pages/Vendors.jsx';
+import Payments from './pages/Payments.jsx';
+import Ledger from './pages/Ledger.jsx';
+import Stock from './pages/Stock.jsx';
+import Reports from './pages/Reports.jsx';
+import GST from './pages/GST.jsx';
+import Settings from './pages/Settings.jsx';
+import Login from './pages/Login.jsx';
 
 export default function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
+  // Continuous Theme Swapper (Swaps Main Site & Chatbot Theme every 4 seconds)
+  useEffect(() => {
+    let isSwapped = false;
+    
+    function updateSwappedColors() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      
+      // Aqua Blue vs Sea Green Teal
+      const aquaColor = isLight ? '#0284C7' : '#06B6D4';
+      const aquaEffects = isLight ? 'rgba(2, 132, 199, 0.14)' : 'rgba(6, 182, 212, 0.15)';
+      
+      const seaColor = isLight ? '#0D9488' : '#14B8A6';
+      const seaEffects = isLight ? 'rgba(13, 148, 136, 0.14)' : 'rgba(20, 184, 166, 0.15)';
+
+      const currentMainColor = isSwapped ? seaColor : aquaColor;
+      const currentMainEffects = isSwapped ? seaEffects : aquaEffects;
+      const currentChatbotColor = isSwapped ? aquaColor : seaColor;
+
+      document.documentElement.style.setProperty('--primary-color', currentMainColor);
+      document.documentElement.style.setProperty('--effects-color', currentMainEffects);
+      document.documentElement.style.setProperty('--chatbot-primary-color', currentChatbotColor);
+
+      window.dispatchEvent(new CustomEvent('themeSwap', { 
+        detail: { 
+          isSwapped,
+          mainColor: currentMainColor,
+          chatbotColor: isSwapped ? aquaColor : seaColor
+        } 
+      }));
+    }
+
+    // Run initial update
+    updateSwappedColors();
+
+    const interval = setInterval(() => {
+      isSwapped = !isSwapped;
+      updateSwappedColors();
+    }, 12000);
+
+    const observer = new MutationObserver(() => updateSwappedColors());
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    return () => {
+      clearInterval(interval);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-          <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />
-          <Route path="/invoice-risk-scanner" element={<ProtectedRoute><InvoiceRiskScanner /></ProtectedRoute>} />
-          <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-          <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-          <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
-          <Route path="/vendors" element={<ProtectedRoute><Vendors /></ProtectedRoute>} />
-          <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-          <Route path="/ledger" element={<ProtectedRoute><Ledger /></ProtectedRoute>} />
-          <Route path="/stock" element={<ProtectedRoute><Stock /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-          <Route path="/gst" element={<ProtectedRoute><GST /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  )
+    <div className={`shell ${isLoginPage ? 'login-active-shell' : ''}`}>
+      <Navbar />
+      <div className={`main ${isLoginPage ? 'login-main-container' : ''}`}>
+        <div className={`content ${isLoginPage ? 'login-content-container' : ''}`}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/invoice-risk-scanner" element={<InvoiceRiskScanner />} />
+            <Route path="/chat" element={<AIChat />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/scan" element={<ScanExtract />} />
+            <Route path="/recon" element={<Reconciliation />} />
+            <Route path="/audit" element={<AuditTrail />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/vendors" element={<Vendors />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/ledger" element={<Ledger />} />
+            <Route path="/stock" element={<Stock />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/gst" element={<GST />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </div>
+      </div>
+
+      {/* Hide Chatbot on Login Page */}
+      {!isLoginPage && <FloatingChat />}
+    </div>
+  );
 }

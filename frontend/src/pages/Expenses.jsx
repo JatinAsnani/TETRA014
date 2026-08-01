@@ -1,76 +1,39 @@
-import { useState, useEffect } from 'react'
-import PageWrapper from '../components/layout/PageWrapper'
-import Modal from '../components/ui/Modal'
-import EmptyState from '../components/ui/EmptyState'
-import ExpenseForm from '../components/forms/ExpenseForm'
-import { formatCurrency } from '../utils/formatCurrency'
-import { formatDate } from '../utils/formatDate'
-import api from '../api/axios'
-import toast from 'react-hot-toast'
+import Topbar from '../components/Topbar.jsx';
+
+const expenses = [
+  { date: '26 Jul 2026', cat: 'Rent', desc: 'Rent payment', amt: '14,569.00', mode: 'Cheque' },
+  { date: '19 Jul 2026', cat: 'Salaries', desc: 'Salaries payment', amt: '44,645.00', mode: 'Card' },
+  { date: '12 Jul 2026', cat: 'Electricity', desc: 'Electricity payment', amt: '3,945.00', mode: 'UPI' },
+  { date: '05 Jul 2026', cat: 'Electricity', desc: 'Electricity payment', amt: '3,860.00', mode: 'Card' },
+  { date: '28 Jun 2026', cat: 'Rent', desc: 'Rent payment', amt: '15,279.00', mode: 'Bank Transfer' },
+  { date: '21 Jun 2026', cat: 'Transport', desc: 'Transport payment', amt: '2,458.00', mode: 'Bank Transfer' },
+];
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState([])
-  const [category, setCategory] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [loading, setLoading] = useState(true)
-
-  const fetch = () => {
-    setLoading(true)
-    api.get('/expenses', { params: { category } }).then(res => setExpenses(res.data)).finally(() => setLoading(false))
-  }
-
-  useEffect(() => { fetch() }, [category])
-
-  const handleCreate = async (data) => {
-    await api.post('/expenses', data)
-    toast.success('Expense recorded')
-    setShowForm(false)
-    fetch()
-  }
-
-  const handleDelete = async (id) => {
-    await api.delete(`/expenses/${id}`)
-    toast.success('Deleted')
-    fetch()
-  }
-
   return (
-    <PageWrapper title="Expenses">
-      <div className="flex justify-between mb-4">
-        <select value={category} onChange={e => setCategory(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
-          <option value="">All Categories</option>
-          {['Rent', 'Salaries', 'Electricity', 'Transport', 'Office Supplies', 'Maintenance'].map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-primary text-white rounded-lg text-sm">+ Add Expense</button>
+    <section className="view" id="view-expenses">
+      <Topbar title="Expenses" />
+      <div className="filters">
+        <select className="select"><option>All Categories</option></select>
+        <button className="btn">+ Add Expense</button>
       </div>
-      <div className="bg-white rounded-xl border overflow-hidden">
-        {expenses.length === 0 && !loading ? (
-          <EmptyState title="No expenses" description="Track your business expenses here" />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[600px]">
-              <thead className="bg-gray-50">
-                <tr>{['Date', 'Category', 'Description', 'Amount', 'Mode', 'Actions'].map(h => <th key={h} className="px-4 py-3 text-left text-xs uppercase text-gray-500">{h}</th>)}</tr>
-              </thead>
-              <tbody className="divide-y">
-                {expenses.map(e => (
-                  <tr key={e.id}>
-                    <td className="px-4 py-3">{formatDate(e.expense_date)}</td>
-                    <td className="px-4 py-3">{e.category}</td>
-                    <td className="px-4 py-3 text-gray-600">{e.description || '-'}</td>
-                    <td className="px-4 py-3 font-mono">{formatCurrency(e.amount)}</td>
-                    <td className="px-4 py-3 capitalize">{e.payment_mode?.replace('_', ' ')}</td>
-                    <td className="px-4 py-3"><button onClick={() => handleDelete(e.id)} className="text-red-600 text-xs">Delete</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="card">
+        <table>
+          <thead><tr><th>Date</th><th>Category</th><th>Description</th><th className="num">Amount</th><th>Mode</th><th>Actions</th></tr></thead>
+          <tbody>
+            {expenses.map((e, i) => (
+              <tr key={i}>
+                <td>{e.date}</td>
+                <td>{e.cat}</td>
+                <td className="link">{e.desc}</td>
+                <td className="num mono">{e.amt}</td>
+                <td>{e.mode}</td>
+                <td className="row-actions"><a className="danger">Delete</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Add Expense">
-        <ExpenseForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
-      </Modal>
-    </PageWrapper>
-  )
+    </section>
+  );
 }
