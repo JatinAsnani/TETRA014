@@ -75,7 +75,7 @@ export default function App() {
 
   return (
     <div className={`shell ${isLoginPage ? 'login-active-shell' : ''}`}>
-      <Navbar />
+      {!isLoginPage && <Navbar />}
       <div className={`main ${isLoginPage ? 'login-main-container' : ''}`}>
         <div className={`content ${isLoginPage ? 'login-content-container' : ''}`}>
           <Routes>
