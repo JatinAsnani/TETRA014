@@ -108,6 +108,27 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
     import re
     msg = user_message.lower()
 
+    if any(w in msg for w in ["name", "who are you", "naam", "kon ho", "identity"]):
+        return {
+            "reply": "Mera naam FRIDAy hai! Main aapka AI Financial Co-Pilot & Accounting Assistant hoon.",
+            "action": None,
+            "data": None
+        }
+
+    if any(w in msg for w in ["hindi", "hinglish", "bhasha", "language"]):
+        return {
+            "reply": "Haan bilkul! Main Hindi aur Hinglish dono samajhta hoon. Aap mujhse billing, GST, profit/loss report, ya accounts ki baat kar sakte hain. Bataiye main aapki kya madad karoon?",
+            "action": None,
+            "data": None
+        }
+
+    if any(w in msg for w in ["hi", "hello", "hey", "namaste", "pranam"]):
+        return {
+            "reply": "Namaste! Main FRIDAy AI Assistant hoon. Main aapki billing, GST calculation, ledger auditing aur financial queries me madad kar sakta hoon.",
+            "action": None,
+            "data": None
+        }
+
     if any(w in msg for w in ["outstanding", "baaki", "kitna", "baki"]):
         for name in ["Raj Traders", "Mehta", "Shah", "Patel", "Kumar", "Verma", "Singh", "Gupta"]:
             if name.lower() in msg:

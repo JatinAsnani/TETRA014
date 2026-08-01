@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
-import { mockSampleInvoices } from '../../api/mockInvoiceRiskData'
 import { uploadInvoice } from '../../api/invoiceRiskApi'
+import { mockSampleInvoices } from '../../api/mockInvoiceRiskData'
 
 export default function UploadPanel({ onInvoiceExtracted }) {
   const [dragActive, setDragActive] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [loadingPreset, setLoadingPreset] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
 
   const handleDrag = (e) => {
@@ -33,39 +32,65 @@ export default function UploadPanel({ onInvoiceExtracted }) {
     }
   }
 
-  const processFile = async (file) => {
+  const [pendingFile, setPendingFile] = useState(null)
+
+  const processFile = async (file, forceOffline = false) => {
     setLoading(true)
     setErrorMsg(null)
+    setPendingFile(file)
     try {
-      const extracted = await uploadInvoice(file)
+      const extracted = await uploadInvoice(file, forceOffline)
+      setPendingFile(null)
       onInvoiceExtracted(extracted)
     } catch (err) {
       console.error('Invoice extraction failed:', err)
-      const msg = err.response?.data?.detail || err.message || 'Invoice extraction failed.'
-      setErrorMsg(msg)
+      const isNetworkErr = err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response
+      const msg = isNetworkErr
+        ? 'Network Error: Cannot connect to FastAPI backend server (http://localhost:8000).'
+        : (err.response?.data?.detail || err.message || 'Invoice extraction failed.')
+      setErrorMsg({ text: msg, isNetworkError: isNetworkErr })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSelectPreset = (preset) => {
-    setLoadingPreset(preset.scanned_invoice_id)
-    setErrorMsg(null)
-    setTimeout(() => {
-      onInvoiceExtracted(preset)
-      setLoadingPreset(null)
-    }, 300)
+  const handleOfflineFallback = () => {
+    if (pendingFile) {
+      processFile(pendingFile, true)
+    }
   }
 
   return (
     <div className="space-y-6">
       {/* Error Toast / Alert */}
       {errorMsg && (
-        <div className="bg-rose-950/80 border border-rose-500/50 text-rose-200 text-xs px-4 py-3 rounded-xl flex items-center justify-between shadow-lg">
-          <span className="flex items-center gap-2">
-            <span>⚠️</span> {errorMsg}
-          </span>
-          <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-white font-bold text-sm">✕</button>
+        <div className="bg-rose-950/90 border border-rose-500/60 text-rose-200 text-xs p-4 rounded-xl shadow-lg space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span className="text-base leading-none">⚠️</span>
+              <div>
+                <p className="font-bold text-rose-100">{typeof errorMsg === 'string' ? errorMsg : errorMsg.text}</p>
+                {errorMsg.isNetworkError && (
+                  <p className="text-rose-300/80 text-[11px] mt-1">
+                    The backend service appears to be offline. Make sure to run <code className="bg-rose-900/60 px-1 py-0.5 rounded text-amber-200 font-mono">start.bat</code> or <code className="bg-rose-900/60 px-1 py-0.5 rounded text-amber-200 font-mono">uvicorn main:app --reload --port 8000</code> in the backend directory.
+                  </p>
+                )}
+              </div>
+            </div>
+            <button onClick={() => setErrorMsg(null)} className="text-rose-400 hover:text-white font-bold text-sm">✕</button>
+          </div>
+
+          {errorMsg.isNetworkError && pendingFile && (
+            <div className="pt-2 border-t border-rose-800/60 flex items-center justify-between">
+              <span className="text-[11px] text-rose-300">Or continue testing right now without backend:</span>
+              <button
+                onClick={handleOfflineFallback}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-md"
+              >
+                <span>⚡</span> Use Offline Client-Side Extraction
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -109,45 +134,7 @@ export default function UploadPanel({ onInvoiceExtracted }) {
           </div>
         )}
       </div>
-
-      {/* Demo Preset Selector */}
-      <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-white font-bold text-sm flex items-center gap-2">
-              <span>⚡</span> Quick Demo Test Presets
-            </h3>
-            <p className="text-slate-400 text-xs mt-0.5">
-              Select pre-loaded invoice test cases covering all 8 risk scenarios for instant evaluation.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {mockSampleInvoices.map((preset, index) => {
-            const isPresetLoading = loadingPreset === preset.scanned_invoice_id
-            return (
-              <button
-                key={preset.scanned_invoice_id}
-                onClick={() => handleSelectPreset(preset)}
-                disabled={isPresetLoading || loading}
-                className="text-left p-3.5 bg-slate-900 border border-slate-700 hover:border-indigo-500 hover:bg-slate-800 rounded-xl transition-all group relative shadow-md"
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-indigo-400">Sample #{index + 1}</span>
-                  <span className="text-xs font-bold text-emerald-400 font-mono">₹{preset.total_amount.toLocaleString('en-IN')}</span>
-                </div>
-                <h4 className="text-white font-bold text-xs truncate group-hover:text-indigo-300">
-                  {preset.scenario}
-                </h4>
-                <p className="text-[11px] text-slate-300 mt-1 truncate">
-                  {preset.vendor_name} ({preset.invoice_number})
-                </p>
-              </button>
-            )
-          })}
-        </div>
-      </div>
     </div>
   )
 }
+

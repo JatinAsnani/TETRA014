@@ -182,9 +182,10 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
               <label className="block text-xs font-semibold text-slate-300 mb-1">Vendor GSTIN</label>
               <input
                 type="text"
+                autoComplete="off"
                 value={items[0].vendor_gstin || ''}
                 onChange={(e) => handleRowChange(0, 'vendor_gstin', e.target.value)}
-                placeholder="Missing"
+                placeholder="GSTIN"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white uppercase focus:outline-none focus:border-indigo-500 font-mono"
               />
             </div>
@@ -194,6 +195,7 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
               <input
                 type="number"
                 step="0.01"
+                autoComplete="off"
                 value={items[0].taxable_value}
                 onChange={(e) => handleRowChange(0, 'taxable_value', e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
@@ -205,6 +207,7 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
               <input
                 type="number"
                 step="0.01"
+                autoComplete="off"
                 value={items[0].tax_amount}
                 onChange={(e) => handleRowChange(0, 'tax_amount', e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
@@ -216,6 +219,7 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
               <input
                 type="number"
                 step="0.01"
+                autoComplete="off"
                 value={items[0].total_amount}
                 onChange={(e) => handleRowChange(0, 'total_amount', e.target.value)}
                 required
@@ -227,9 +231,10 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
               <label className="block text-xs font-semibold text-slate-300 mb-1">Extraction Note</label>
               <input
                 type="text"
+                autoComplete="off"
                 value={items[0].notes || ''}
                 onChange={(e) => handleRowChange(0, 'notes', e.target.value)}
-                placeholder="Optional notes"
+                placeholder="Extraction Notes"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
               />
             </div>

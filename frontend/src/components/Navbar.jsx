@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const navClass = ({ isActive }) => 'dropdown-link' + (isActive ? ' active' : '');
 
 export default function Navbar() {
   const [theme, setTheme] = useState(() => localStorage.getItem('app-theme') || 'dark');
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -19,14 +22,22 @@ export default function Navbar() {
     }, 100);
   };
 
+  const handleLogout = () => {
+    if (logout) logout();
+    navigate('/login');
+  };
+
+  const displayName = user?.business_name || user?.name || 'Sharma General Store';
+  const userInitials = (displayName || 'S').slice(0, 2).toUpperCase();
+
   return (
     <header className="topnav">
       {/* Row 1: Highlighted Logo & User Profile Header */}
       <div className="topnav-top">
         <div className="topnav-top-inner">
-          <div className="topnav-brand">
-            <div className="topnav-logo-badge" title="FRIDAy AI System">
-              <img src="/logo.png" alt="FRIDAy Logo" className="topnav-logo-img" />
+          <div className="topnav-brand" onClick={() => window.location.reload()} style={{ cursor: 'pointer' }} title="Click to refresh page">
+            <div className="topnav-logo-badge" title="TallAI System">
+              <img src="/logo.png" alt="TallAI Logo" className="topnav-logo-img" />
             </div>
             <div className="topnav-brand-info">
               <div className="topnav-sub">
@@ -36,7 +47,7 @@ export default function Navbar() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            {/* 2-Way Theme Switcher (Sun ☀️ <-> Moon 🌙) Left of Username */}
+            {/* Theme Switcher */}
             <div
               className={`theme-toggle-switch ${theme}`}
               onClick={toggleTheme}
@@ -49,35 +60,15 @@ export default function Navbar() {
               <span className={`switch-icon moon ${theme === 'dark' ? 'active' : ''}`}>🌙</span>
             </div>
 
-            {/* Quick Access Cat Login Page Link */}
-            <NavLink
-              to="/login"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                borderRadius: 20,
-                background: 'var(--effects-color)',
-                border: '1.5px solid var(--primary-color)',
-                color: 'var(--primary-color)',
-                fontSize: 12.5,
-                fontWeight: 800,
-                textDecoration: 'none',
-                boxShadow: '0 2px 8px var(--effects-color)',
-              }}
-              title="Go to Cat Green Screen Login Page"
-            >
-              <span>🐱</span> Cat Login Page
-            </NavLink>
+
 
             {/* User Profile Pill & Dropdown */}
             <div className="user-profile-dropdown">
               <div className="profile-pill">
-                <div className="profile-avatar">SG</div>
+                <div className="profile-avatar">{userInitials}</div>
                 <div className="profile-info">
-                  <span className="profile-name">Sharma General Store</span>
-                  <span className="profile-role">Store Admin</span>
+                  <span className="profile-name">{displayName}</span>
+                  <span className="profile-role">{user?.role || 'Admin'}</span>
                 </div>
                 <span className="profile-arrow">▾</span>
               </div>
@@ -85,18 +76,22 @@ export default function Navbar() {
               {/* Hover Dropdown Menu */}
               <div className="profile-dropdown-menu">
                 <div className="profile-header">
-                  <div className="header-avatar">SG</div>
+                  <div className="header-avatar">{userInitials}</div>
                   <div>
-                    <div className="header-name">Sharma General Store</div>
-                    <div className="header-email">admin@sharmastore.com</div>
+                    <div className="header-name">{displayName}</div>
+                    <div className="header-email">{user?.email || 'admin@tallai.com'}</div>
                   </div>
                 </div>
+
+                <NavLink to="/organization" className="profile-menu-item">
+                  <span className="ic">🏢</span> Organization &amp; Team
+                </NavLink>
 
                 <NavLink to="/settings" className="profile-menu-item">
                   <span className="ic">⚙️</span> Store Settings
                 </NavLink>
                 
-                <a className="profile-menu-item logout" onClick={() => alert('Logged out successfully.')}>
+                <a className="profile-menu-item logout" onClick={handleLogout}>
                   <span className="ic">🚪</span> Logout
                 </a>
               </div>

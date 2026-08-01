@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import Optional
 from database import get_db
-from deps import get_current_user
+from deps import get_current_user, get_org_id
 import models
 import schemas
 
@@ -16,7 +16,8 @@ def create_vendor(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    vendor = models.Vendor(user_id=user.id, **data.model_dump())
+    org_id = get_org_id(user, db)
+    vendor = models.Vendor(user_id=org_id, **data.model_dump())
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
@@ -30,7 +31,8 @@ def list_vendors(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.Vendor).filter(models.Vendor.user_id == user.id)
+    org_id = get_org_id(user, db)
+    q = db.query(models.Vendor).filter(models.Vendor.user_id == org_id)
     if search:
         q = q.filter(or_(
             models.Vendor.name.ilike(f"%{search}%"),
@@ -47,9 +49,10 @@ def get_vendor(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     vendor = (
         db.query(models.Vendor)
-        .filter(models.Vendor.id == vendor_id, models.Vendor.user_id == user.id)
+        .filter(models.Vendor.id == vendor_id, models.Vendor.user_id == org_id)
         .first()
     )
     if not vendor:
@@ -60,7 +63,11 @@ def get_vendor(
         .order_by(models.PurchaseInvoice.bill_date.desc())
         .all()
     )
-    return {"vendor": vendor, "purchases": purchases, "outstanding": float(vendor.outstanding)}
+    return {
+        "vendor": vendor,
+        "purchases": purchases,
+        "outstanding": float(vendor.outstanding),
+    }
 
 
 @router.put("/{vendor_id}", response_model=schemas.VendorResponse)
@@ -70,9 +77,10 @@ def update_vendor(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     vendor = (
         db.query(models.Vendor)
-        .filter(models.Vendor.id == vendor_id, models.Vendor.user_id == user.id)
+        .filter(models.Vendor.id == vendor_id, models.Vendor.user_id == org_id)
         .first()
     )
     if not vendor:
@@ -90,9 +98,10 @@ def delete_vendor(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     vendor = (
         db.query(models.Vendor)
-        .filter(models.Vendor.id == vendor_id, models.Vendor.user_id == user.id)
+        .filter(models.Vendor.id == vendor_id, models.Vendor.user_id == org_id)
         .first()
     )
     if not vendor:

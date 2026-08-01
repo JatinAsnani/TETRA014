@@ -1,104 +1,175 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import GreenScreenCat from '../components/GreenScreenCat.jsx';
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import GreenScreenCat from '../components/GreenScreenCat.jsx'
+import toast from 'react-hot-toast'
+import { getErrorMessage } from '../utils/formatError'
 
 export default function Login() {
-  const [email, setEmail] = useState('demo@tallai.com');
-  const [password, setPassword] = useState('demo123');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const auth = useAuth();
-  const login = auth?.login;
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+
+  const [showGoogleFallback, setShowGoogleFallback] = useState(false)
+  const [googleEmailInput, setGoogleEmailInput] = useState('')
+
+  const { login, googleLogin } = useAuth()
+  const navigate = useNavigate()
 
   // Validation Error State for Cat reaction
-  const [catVideo, setCatVideo] = useState('/cat_login.mp4');
-  const [bubbleText, setBubbleText] = useState('Aaja login karle');
-  const [isError, setIsError] = useState(false);
+  const [catVideo, setCatVideo] = useState('/cat_login.mp4')
+  const [bubbleText, setBubbleText] = useState('Aaja login karle')
+  const [isError, setIsError] = useState(false)
 
-  const navigate = useNavigate();
+  // Theme State & Toggle
+  const [theme, setTheme] = useState(() => localStorage.getItem('app-theme') || 'dark')
 
-  async function validateAndLogin(e) {
-    e?.preventDefault();
-    setIsError(false);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('app-theme', theme)
+  }, [theme])
 
-    // 1. Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim() || !emailRegex.test(email)) {
-      setCatVideo('/cat_wrong.mp4');
-      setBubbleText('Invalid Email Address! 😿');
-      setIsError(true);
-      return;
+  const toggleTheme = () => {
+    document.documentElement.classList.add('theme-toggling')
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-toggling')
+    }, 100)
+  }
+
+  useEffect(() => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "51956503353-novh10hungdgk568emmrmf0g4be6obl8.apps.googleusercontent.com"
+
+    const handleCredentialResponse = async (response) => {
+      try {
+        setIsLoading(true)
+        await googleLogin(response.credential)
+        setCatVideo('/cat_happy.mp4')
+        setBubbleText('Welcome to FRIDAY! 🥳🎉')
+        setIsSuccess(true)
+        toast.success('Welcome to FRIDAY!')
+        setTimeout(() => navigate('/'), 1200)
+      } catch (err) {
+        setShowGoogleFallback(true)
+        toast.error(getErrorMessage(err, 'Google auth failed. Try direct Google email connection.'))
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    // 2. Password length & correctness validation
-    if (!password || password.length < 5) {
-      setCatVideo('/cat_wrong.mp4');
-      setBubbleText('Wrong Password! 😿 (Min 5 chars)');
-      setIsError(true);
-      return;
+    const initGsi = () => {
+      if (window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleCredentialResponse,
+            use_fedcm_for_prompt: false,
+            auto_select: false,
+          })
+          const btnElem = document.getElementById('googleSignInBtn')
+          if (btnElem) {
+            btnElem.innerHTML = ''
+            window.google.accounts.id.renderButton(btnElem, {
+              theme: 'outline',
+              size: 'large',
+              width: '100%',
+              text: 'continue_with'
+            })
+          }
+        } catch (e) {
+          setShowGoogleFallback(true)
+        }
+      }
+    }
+
+    if (document.getElementById('google-jssdk')) {
+      initGsi()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = 'google-jssdk'
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = initGsi
+    script.onerror = () => {
+      setShowGoogleFallback(true)
+    }
+    document.body.appendChild(script)
+  }, [])
+
+  async function validateAndLogin(e) {
+    e?.preventDefault()
+    setIsError(false)
+
+    // 1. Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email.trim() || !emailRegex.test(email)) {
+      setCatVideo('/cat_wrong.mp4')
+      setBubbleText('Invalid Email Address! 😿')
+      setIsError(true)
+      return
+    }
+
+    // 2. Password validation
+    if (!password || password.length < 3) {
+      setCatVideo('/cat_wrong.mp4')
+      setBubbleText('Please enter password! 😿')
+      setIsError(true)
+      return
     }
 
     if (password === 'wrong') {
-      setCatVideo('/cat_wrong.mp4');
-      setBubbleText('Wrong Password! Try again 😿');
-      setIsError(true);
-      return;
+      setCatVideo('/cat_wrong.mp4')
+      setBubbleText('Wrong Password! Try again 😿')
+      setIsError(true)
+      return
     }
 
-    // Instant Login Success & Happy Cat Celebration!
-    setCatVideo('/cat_happy.mp4');
-    setBubbleText('Yay! Login Successful! 🥳🎉');
-    setIsSuccess(true);
-    setIsLoading(true);
-
-    if (login) {
-      login(email, password).catch(() => {});
+    // Attempt Login
+    setIsLoading(true)
+    try {
+      if (login) {
+        await login(email, password)
+      }
+      setCatVideo('/cat_happy.mp4')
+      setBubbleText('Yay! Login Successful! 🥳🎉')
+      setIsSuccess(true)
+      toast.success('Welcome to FRIDAY!')
+      setTimeout(() => navigate('/'), 1200)
+    } catch (err) {
+      setCatVideo('/cat_wrong.mp4')
+      setBubbleText('Login Failed! 😿 Check credentials')
+      setIsError(true)
+      toast.error(getErrorMessage(err, 'Invalid login credentials'))
+    } finally {
+      setIsLoading(false)
     }
-
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate('/');
-    }, 1600);
   }
 
-  function handleQuickFill(role) {
-    setIsError(false);
-    setCatVideo('/cat_login.mp4');
-    setBubbleText('Aaja login karle');
-
-    let targetEmail = 'demo@tallai.com';
-    let targetPass = 'demo123';
-
-    if (role === 'owner') {
-      targetEmail = 'sharma.owner@tallai.in';
-      targetPass = 'OwnerPass2026!';
-    } else if (role === 'accountant') {
-      targetEmail = 'accountant@sharmastore.com';
-      targetPass = 'TaxAudit#8819';
-    } else if (role === 'auditor') {
-      targetEmail = 'auditor@gst.gov.in';
-      targetPass = 'GSTN-Verify990';
-    } else if (role === 'wrong-pass') {
-      setEmail('admin@sharmastore.com');
-      setPassword('wrong');
-      setCatVideo('/cat_wrong.mp4');
-      setBubbleText('Wrong Password! Try again 😿');
-      setIsError(true);
-      return;
-    } else if (role === 'wrong-email') {
-      setEmail('invalid-email-format');
-      setPassword('Password123');
-      setCatVideo('/cat_wrong.mp4');
-      setBubbleText('Invalid Email Address! 😿');
-      setIsError(true);
-      return;
+  const handleDirectGoogleLogin = async (e) => {
+    e.preventDefault()
+    if (!googleEmailInput.trim()) return
+    setIsLoading(true)
+    try {
+      await googleLogin({ email: googleEmailInput.trim(), name: googleEmailInput.split('@')[0] })
+      setCatVideo('/cat_happy.mp4')
+      setBubbleText('Signed in with Google! 🥳🎉')
+      setIsSuccess(true)
+      toast.success('Signed in with Google!')
+      setTimeout(() => navigate('/'), 1200)
+    } catch (err) {
+      setCatVideo('/cat_wrong.mp4')
+      setBubbleText('Google Login Failed 😿')
+      setIsError(true)
+      toast.error(getErrorMessage(err, 'Google login failed'))
+    } finally {
+      setIsLoading(false)
     }
-
-    setEmail(targetEmail);
-    setPassword(targetPass);
   }
 
   return (
@@ -114,7 +185,29 @@ export default function Login() {
         background: 'var(--bg)',
       }}
     >
-      {/* Main Stage Container (Extra Large Cat Video + Speech Bubble + Login Box) */}
+      {/* Theme Switcher Toggle (Top Right) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 20,
+          right: 24,
+          zIndex: 30,
+        }}
+      >
+        <div
+          className={`theme-toggle-switch ${theme}`}
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        >
+          <span className={`switch-icon sun ${theme === 'light' ? 'active' : ''}`}>☀️</span>
+          <div className="switch-track">
+            <div className="switch-thumb" />
+          </div>
+          <span className={`switch-icon moon ${theme === 'dark' ? 'active' : ''}`}>🌙</span>
+        </div>
+      </div>
+
+      {/* Main Stage Container */}
       <div
         style={{
           width: '100%',
@@ -176,10 +269,10 @@ export default function Login() {
             />
           </div>
 
-          {/* Extra Large Real-time Green Screen Keyed-Out Cat Canvas (540px x 540px) */}
+          {/* Real-time Green Screen Cat Canvas */}
           <GreenScreenCat videoSrc={catVideo} width={540} height={540} />
 
-          {/* Animated Progress Bar Below Cat Video on Login Success */}
+          {/* Animated Progress Bar on Login Success */}
           {isSuccess && (
             <div style={{ width: 360, marginTop: 12, textAlign: 'center' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary-color)', marginBottom: 8, letterSpacing: '0.04em' }}>
@@ -191,7 +284,7 @@ export default function Login() {
                     height: '100%',
                     background: 'linear-gradient(90deg, #06B6D4, #14B8A6, #10B981)',
                     borderRadius: 10,
-                    animation: 'loadingProgress 2.2s ease-in-out forwards',
+                    animation: 'loadingProgress 1.6s ease-in-out forwards',
                   }}
                 />
               </div>
@@ -199,7 +292,7 @@ export default function Login() {
           )}
         </div>
 
-        {/* Glassmorphic Login Box — Hidden when login is successful */}
+        {/* Glassmorphic Login Box */}
         {!isSuccess && (
           <div
             style={{
@@ -208,7 +301,7 @@ export default function Login() {
               background: 'var(--card-bg)',
               border: `2px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
               borderRadius: 24,
-              padding: '36px 30px',
+              padding: '32px 28px',
               boxShadow: 'none',
               backdropFilter: 'blur(20px)',
               position: 'relative',
@@ -217,275 +310,176 @@ export default function Login() {
               transition: 'all 0.3s ease',
             }}
           >
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 22 }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 60,
-                height: 60,
-                borderRadius: 18,
-                background: 'var(--effects-color)',
-                border: '1.5px solid var(--primary-color)',
-                boxShadow: '0 8px 24px var(--effects-color)',
-                marginBottom: 12,
-              }}
-            >
-              <img src="/logo.png" alt="FRIDAy Logo" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />
-            </div>
-
-            <h2 style={{ fontSize: 23, fontWeight: 900, color: 'var(--text)', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-              Welcome to FRIDAy AI
-            </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: 0 }}>
-              Financial Accounting &amp; Risk Scanner
-            </p>
-          </div>
-
-          {/* Quick Demo Fill Pills */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-soft)', marginBottom: 8 }}>
-              ⚡ DEMO LOGIN / ERROR TEST CHIPS:
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('owner')}
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div
                 style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 22px',
+                  borderRadius: 18,
                   background: 'var(--effects-color)',
-                  border: '1px solid var(--primary-color)',
-                  color: 'var(--primary-color)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '4px 9px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
+                  border: '1.5px solid var(--primary-color)',
+                  marginBottom: 12,
                 }}
               >
-                👑 Store Owner
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('accountant')}
-                style={{
-                  background: 'var(--effects-color)',
-                  border: '1px solid var(--primary-color)',
-                  color: 'var(--primary-color)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '4px 9px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                🧮 Accountant
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('wrong-pass')}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid #EF4444',
-                  color: '#EF4444',
-                  fontSize: 11,
-                  fontWeight: 800,
-                  padding: '4px 9px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                🚨 Test Wrong Pass
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('wrong-email')}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid #EF4444',
-                  color: '#EF4444',
-                  fontSize: 11,
-                  fontWeight: 800,
-                  padding: '4px 9px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                }}
-              >
-                🚨 Test Invalid Email
-              </button>
-            </div>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={validateAndLogin}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                Business Email / GSTIN ID
-              </label>
-              <input
-                type="text"
-                required
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (isError) {
-                    setIsError(false);
-                    setBubbleText('Aaja login karle');
-                  }
-                }}
-                placeholder="admin@sharmastore.com"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: 10,
-                  background: 'var(--page)',
-                  border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
-                  color: 'var(--text)',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>
-                  Password
-                </label>
-                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Password reset link sent!'); }} style={{ fontSize: 12, color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 700 }}>
-                  Forgot?
-                </a>
+                <img src="/logo.png" alt="FRIDAY AI Logo" className="topnav-logo-img" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
               </div>
-              <div style={{ position: 'relative' }}>
+
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                Welcome to FRIDAY
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: 0 }}>
+                AI Accounting &amp; Risk Scanner
+              </p>
+            </div>
+
+            {/* Google Sign In Container */}
+            <div style={{ marginBottom: 16 }}>
+              <div id="googleSignInBtn" style={{ width: '100%', display: 'flex', justifyContent: 'center', minHeight: 44 }}></div>
+            </div>
+
+
+            {/* Form */}
+            <form onSubmit={validateAndLogin} autoComplete="off">
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 5 }}>
+                  Email Address
+                </label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type="text"
                   required
-                  value={password}
+                  autoComplete="off"
+                  value={email}
                   onChange={(e) => {
-                    setPassword(e.target.value);
+                    setEmail(e.target.value)
                     if (isError) {
-                      setIsError(false);
-                      setBubbleText('Aaja login karle');
+                      setIsError(false)
+                      setBubbleText('Aaja login karle')
                     }
                   }}
-                  placeholder="••••••••••••"
+                  placeholder="Email Address"
                   style={{
                     width: '100%',
-                    padding: '12px 42px 12px 14px',
+                    padding: '10px 12px',
                     borderRadius: 10,
                     background: 'var(--page)',
                     border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
                     color: 'var(--text)',
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: 600,
                     outline: 'none',
                     boxSizing: 'border-box',
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-soft)',
-                    cursor: 'pointer',
-                    fontSize: 15,
-                  }}
-                >
-                  {showPassword ? '👁️' : '🙈'}
-                </button>
               </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
+                    Password
+                  </label>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      if (isError) {
+                        setIsError(false)
+                        setBubbleText('Aaja login karle')
+                      }
+                    }}
+                    placeholder="Password"
+                    style={{
+                      width: '100%',
+                      padding: '10px 38px 10px 12px',
+                      borderRadius: 10,
+                      background: 'var(--page)',
+                      border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
+                      color: 'var(--text)',
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-soft)',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                    }}
+                  >
+                    {showPassword ? '👁️' : '🙈'}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || isSuccess}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: isSuccess ? '#10B981' : 'var(--primary-color)',
+                  color: '#FFFFFF',
+                  fontSize: 14.5,
+                  fontWeight: 900,
+                  cursor: isLoading ? 'wait' : 'pointer',
+                  boxShadow: 'none',
+                  transition: 'all 0.25s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                {isLoading ? (
+                  <>
+                    <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
+                    Signing in...
+                  </>
+                ) : isSuccess ? (
+                  <>
+                    <span>✓</span> Login Success! Redirecting...
+                  </>
+                ) : (
+                  <>
+                    Sign In to Dashboard →
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Register Link */}
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <p style={{ fontSize: 12.5, color: 'var(--text-soft)', margin: 0 }}>
+                Don't have an account?{' '}
+                <Link to="/register" style={{ color: 'var(--primary-color)', fontWeight: 700, textDecoration: 'none' }}>
+                  Register here
+                </Link>
+              </p>
             </div>
-
-            {/* Remember Me */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-soft)', cursor: 'pointer', fontWeight: 600 }}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ accentColor: 'var(--primary-color)', width: 16, height: 16, cursor: 'pointer' }}
-                />
-                Remember this browser
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || isSuccess}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: 12,
-                border: 'none',
-                background: isSuccess ? '#10B981' : 'var(--primary-color)',
-                color: '#FFFFFF',
-                fontSize: 15,
-                fontWeight: 900,
-                cursor: isLoading ? 'wait' : 'pointer',
-                boxShadow: 'none',
-                transition: 'all 0.25s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                  Authenticating...
-                </>
-              ) : isSuccess ? (
-                <>
-                  <span>✓</span> Login Success! Redirecting...
-                </>
-              ) : (
-                <>
-                  Sign In to Dashboard →
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Security Footer */}
-          <div
-            style={{
-              marginTop: 22,
-              paddingTop: 14,
-              borderTop: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 11.5,
-              color: 'var(--text-soft)',
-            }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ color: '#10B981' }}>🛡️</span> 256-Bit SSL Encrypted
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', display: 'inline-block' }}></span>
-              System Online
-            </span>
           </div>
-        </div>
-      )}
+        )}
       </div>
 
       <style>{`
-        @keyframes pulseGlow {
-          0% { transform: scale(1) translate(0, 0); }
-          100% { transform: scale(1.15) translate(20px, -20px); }
-        }
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
@@ -501,5 +495,5 @@ export default function Login() {
         }
       `}</style>
     </div>
-  );
+  )
 }

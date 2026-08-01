@@ -12,7 +12,7 @@ def is_configured():
     key = get_api_key()
     return bool(key and key != "YOUR_GEMINI_API_KEY_HERE")
 
-PREFERRED_MODELS = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.0-flash-lite"]
+PREFERRED_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-flash-latest"]
 
 def generate_content_rest(prompt: str, system_instruction: str = None) -> str:
     """Send a prompt to Gemini via REST API with model fallback."""
@@ -55,8 +55,6 @@ def chat_with_gemini_rest(user_message: str, chat_history: list, tools_declarati
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-
     # Build contents from history
     contents = []
     for item in chat_history[-10:]:
@@ -75,42 +73,45 @@ def chat_with_gemini_rest(user_message: str, chat_history: list, tools_declarati
     if tools_declarations:
         payload["tools"] = [{"functionDeclarations": tools_declarations}]
 
-    try:
-        res = requests.post(url, json=payload, timeout=20)
-        if res.status_code != 200:
-            print(f"[gemini_rest] Chat error {res.status_code}: {res.text[:200]}")
-            return None
+    for model_name in PREFERRED_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        try:
+            res = requests.post(url, json=payload, timeout=20)
+            if res.status_code != 200:
+                print(f"[gemini_rest] Chat error {res.status_code} on {model_name}: {res.text[:200]}")
+                continue
 
-        data = res.json()
-        candidates = data.get("candidates", [])
-        if not candidates:
-            return None
+            data = res.json()
+            candidates = data.get("candidates", [])
+            if not candidates:
+                continue
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        
-        # Check for function call first
-        for p in parts:
-            if "functionCall" in p:
-                fc = p["functionCall"]
-                return {
-                    "text": None,
-                    "function_call": {
-                        "name": fc.get("name"),
-                        "args": fc.get("args", {})
-                    },
-                    "contents_history": contents
-                }
+            parts = candidates[0].get("content", {}).get("parts", [])
+            
+            # Check for function call first
+            for p in parts:
+                if "functionCall" in p:
+                    fc = p["functionCall"]
+                    return {
+                        "text": None,
+                        "function_call": {
+                            "name": fc.get("name"),
+                            "args": fc.get("args", {})
+                        },
+                        "contents_history": contents
+                    }
 
-        # Otherwise return text
-        text_response = ""
-        for p in parts:
-            if "text" in p:
-                text_response += p["text"]
+            # Otherwise return text
+            text_response = ""
+            for p in parts:
+                if "text" in p:
+                    text_response += p["text"]
 
-        return {"text": text_response, "function_call": None}
+            if text_response:
+                return {"text": text_response, "function_call": None}
 
-    except Exception as e:
-        print(f"[gemini_rest] Chat Exception: {e}")
+        except Exception as e:
+            print(f"[gemini_rest] Chat Exception on {model_name}: {e}")
 
     return None
 
@@ -120,8 +121,6 @@ def send_function_response_rest(contents_history: list, tool_name: str, tool_arg
     api_key = get_api_key()
     if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
         return None
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
 
     # Append model's functionCall turn
     contents = list(contents_history)
@@ -145,20 +144,22 @@ def send_function_response_rest(contents_history: list, tool_name: str, tool_arg
     if system_instruction:
         payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-    try:
-        res = requests.post(url, json=payload, timeout=20)
-        if res.status_code == 200:
-            data = res.json()
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                text_response = ""
-                for p in parts:
-                    if "text" in p:
-                        text_response += p["text"]
-                if text_response:
-                    return text_response
-    except Exception as e:
-        print(f"[gemini_rest] Function response exception: {e}")
+    for model_name in PREFERRED_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        try:
+            res = requests.post(url, json=payload, timeout=20)
+            if res.status_code == 200:
+                data = res.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    text_response = ""
+                    for p in parts:
+                        if "text" in p:
+                            text_response += p["text"]
+                    if text_response:
+                        return text_response
+        except Exception as e:
+            print(f"[gemini_rest] Function response exception on {model_name}: {e}")
 
     return None

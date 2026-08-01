@@ -12,8 +12,10 @@ const links = [
   { to: '/stock', label: 'Stock', icon: '📦' },
   { to: '/reports', label: 'Reports', icon: '📈' },
   { to: '/gst', label: 'GST', icon: '🧾' },
+  { to: '/organization', label: 'Organization', icon: '🏢' },
   { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
+
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   return (

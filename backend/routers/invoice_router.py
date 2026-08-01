@@ -1,15 +1,16 @@
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func
 from typing import Optional
 from database import get_db
-from deps import get_current_user
+from deps import get_current_user, get_org_id, get_org_user
 from features.gst_engine import calculate_gst
 from features.ledger_engine import create_invoice_ledger, reverse_invoice_ledger
 from features.invoice_pdf import generate_invoice_pdf
+from services.activity_logger import log_activity
 import models
 import schemas
 
@@ -103,15 +104,17 @@ def _invoice_to_dict(inv, customer=None):
 
 
 def _create_invoice_internal(db, user, data: schemas.InvoiceCreate):
+    org_id = get_org_id(user, db)
+    org_user = get_org_user(user, db)
     customer = (
         db.query(models.Customer)
-        .filter(models.Customer.id == data.customer_id, models.Customer.user_id == user.id)
+        .filter(models.Customer.id == data.customer_id, models.Customer.user_id == org_id)
         .first()
     )
     if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
+        raise HTTPException(status_code=404, detail="Customer not found in your organization")
 
-    business_state = user.business_address or ""
+    business_state = getattr(org_user, 'business_address', '') or ""
     place = data.place_of_supply or customer.state or "Gujarat"
     same_state = place.lower() in (customer.state or "").lower() or "gujarat" in place.lower()
 
@@ -122,9 +125,9 @@ def _create_invoice_internal(db, user, data: schemas.InvoiceCreate):
 
     status = models.InvoiceStatus(data.status) if data.status else models.InvoiceStatus.draft
     invoice = models.Invoice(
-        user_id=user.id,
+        user_id=org_id,
         customer_id=data.customer_id,
-        invoice_number=_next_invoice_number(db, user.id),
+        invoice_number=_next_invoice_number(db, org_id),
         invoice_date=data.invoice_date,
         due_date=data.due_date or (data.invoice_date + timedelta(days=30)),
         place_of_supply=place,
@@ -151,7 +154,16 @@ def _create_invoice_internal(db, user, data: schemas.InvoiceCreate):
     if status != models.InvoiceStatus.draft:
         customer.outstanding = Decimal(str(float(customer.outstanding) + total_amount))
         customer.total_business = Decimal(str(float(customer.total_business) + total_amount))
-        create_invoice_ledger(db, user.id, invoice, customer.name)
+        create_invoice_ledger(db, org_id, invoice, customer.name)
+
+    log_activity(
+        db, user,
+        action_type="CREATE_INVOICE",
+        entity_type="invoice",
+        entity_id=invoice.id,
+        description=f"Created Invoice #{invoice.invoice_number} for {customer.name}",
+        amount=float(invoice.total_amount),
+    )
 
     db.commit()
     db.refresh(invoice)
@@ -182,10 +194,11 @@ def list_invoices(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     q = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.items), joinedload(models.Invoice.customer))
-        .filter(models.Invoice.user_id == user.id, models.Invoice.is_deleted == False)
+        .filter(models.Invoice.user_id == org_id, models.Invoice.is_deleted == False)
     )
     if status:
         q = q.filter(models.Invoice.status == status)
@@ -229,10 +242,11 @@ def get_invoice(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     invoice = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.items), joinedload(models.Invoice.customer))
-        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == user.id, models.Invoice.is_deleted == False)
+        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == org_id, models.Invoice.is_deleted == False)
         .first()
     )
     if not invoice:
@@ -247,10 +261,11 @@ def update_invoice(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     invoice = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.items), joinedload(models.Invoice.customer))
-        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == user.id, models.Invoice.is_deleted == False)
+        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == org_id, models.Invoice.is_deleted == False)
         .first()
     )
     if not invoice:
@@ -293,6 +308,15 @@ def update_invoice(
     if diff != 0 and customer:
         customer.outstanding = Decimal(str(float(customer.outstanding) + diff))
 
+    log_activity(
+        db, user,
+        action_type="UPDATE_INVOICE",
+        entity_type="invoice",
+        entity_id=invoice.id,
+        description=f"Updated Invoice #{invoice.invoice_number}",
+        amount=float(invoice.total_amount),
+    )
+
     db.commit()
     db.refresh(invoice)
     return invoice
@@ -304,10 +328,11 @@ def delete_invoice(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     invoice = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.customer))
-        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == user.id)
+        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == org_id)
         .first()
     )
     if not invoice:
@@ -316,8 +341,16 @@ def delete_invoice(
         invoice.customer.outstanding = Decimal(str(
             float(invoice.customer.outstanding) - float(invoice.balance_due)
         ))
-    reverse_invoice_ledger(db, user.id, invoice, invoice.customer.name if invoice.customer else "Unknown")
+    reverse_invoice_ledger(db, org_id, invoice, invoice.customer.name if invoice.customer else "Unknown")
     invoice.is_deleted = True
+    log_activity(
+        db, user,
+        action_type="DELETE_INVOICE",
+        entity_type="invoice",
+        entity_id=invoice.id,
+        description=f"Deleted Invoice #{invoice.invoice_number}",
+        amount=float(invoice.total_amount),
+    )
     db.commit()
     return {"message": "Invoice deleted"}
 
@@ -329,10 +362,11 @@ def update_status(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     invoice = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.customer))
-        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == user.id)
+        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == org_id)
         .first()
     )
     if not invoice:
@@ -342,7 +376,7 @@ def update_status(
         remaining = float(invoice.balance_due)
         if remaining > 0:
             payment = models.Payment(
-                user_id=user.id,
+                user_id=org_id,
                 customer_id=invoice.customer_id,
                 invoice_id=invoice.id,
                 amount=Decimal(str(remaining)),
@@ -358,7 +392,7 @@ def update_status(
                 ))
             from features.ledger_engine import create_payment_ledger
             db.flush()
-            create_payment_ledger(db, user.id, payment, invoice.customer.name if invoice.customer else "")
+            create_payment_ledger(db, org_id, payment, invoice.customer.name if invoice.customer else "")
     db.commit()
     return {"message": f"Status updated to {status}"}
 
@@ -369,19 +403,21 @@ def download_pdf(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
+    org_user = get_org_user(user, db)
     invoice = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.items), joinedload(models.Invoice.customer))
-        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == user.id)
+        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == org_id)
         .first()
     )
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     inv_data = _invoice_to_dict(invoice, invoice.customer)
     business = {
-        "business_name": user.business_name or user.name,
-        "business_address": user.business_address or "",
-        "gstin": user.gstin or "",
+        "business_name": getattr(org_user, 'business_name', None) or getattr(org_user, 'name', ''),
+        "business_address": getattr(org_user, 'business_address', '') or "",
+        "gstin": getattr(org_user, 'gstin', '') or "",
     }
     pdf_bytes = generate_invoice_pdf(inv_data, business)
     return Response(
@@ -401,9 +437,10 @@ def record_invoice_payment(
     db: Session = Depends(get_db),
 ):
     from routers.payment_router import _apply_payment
+    org_id = get_org_id(user, db)
     invoice = (
         db.query(models.Invoice)
-        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == user.id)
+        .filter(models.Invoice.id == invoice_id, models.Invoice.user_id == org_id)
         .first()
     )
     if not invoice:

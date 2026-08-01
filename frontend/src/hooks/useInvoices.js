@@ -11,7 +11,33 @@ export function useInvoices(filters = {}) {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
       const res = await api.get(`/invoices?${params}`)
-      setData(res.data)
+      const resData = res.data
+      const items = Array.isArray(resData) ? resData : (resData.items || [])
+      
+      const totalInvoiced = items.reduce((a, b) => a + (parseFloat(b.total_amount) || 0), 0)
+      const totalReceived = items.filter(i => i.status === 'paid').reduce((a, b) => a + (parseFloat(b.total_amount) || 0), 0)
+      const totalOutstanding = totalInvoiced - totalReceived
+
+      setData({
+        items,
+        total: items.length,
+        summary: {
+          total_invoiced: totalInvoiced,
+          total_received: totalReceived,
+          total_outstanding: totalOutstanding
+        }
+      })
+    } catch (err) {
+      console.warn('Backend invoices unreachable, returning clean empty state:', err)
+      setData({
+        items: [],
+        total: 0,
+        summary: {
+          total_invoiced: 0,
+          total_received: 0,
+          total_outstanding: 0
+        }
+      })
     } finally {
       setLoading(false)
     }

@@ -229,9 +229,9 @@ button{font-family:inherit; cursor:pointer;}
 }
 .topnav-logo-badge {
   background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 4px 12px;
+  border: 1.5px solid var(--primary-color);
+  border-radius: 16px;
+  padding: 8px 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -244,7 +244,7 @@ button{font-family:inherit; cursor:pointer;}
   box-shadow: 0 6px 20px var(--effects-color);
 }
 .topnav-logo-img {
-  height: 34px;
+  height: 28px;
   width: auto;
   object-fit: contain;
   border: none;
@@ -253,7 +253,16 @@ button{font-family:inherit; cursor:pointer;}
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 [data-theme="light"] .topnav-logo-img {
-  filter: brightness(0);
+  filter: brightness(0.1) contrast(1.2);
+}
+
+.cat-canvas {
+  filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.45));
+  transition: filter 0.3s ease;
+}
+
+[data-theme="light"] .cat-canvas {
+  filter: none !important;
 }
 .topnav-sub {
   color: var(--text-soft);
@@ -567,7 +576,7 @@ button{font-family:inherit; cursor:pointer;}
 
 /* ===== Main Content Area ===== */
 .main{ flex:1; min-width:0; background:var(--page);}
-.content{ padding:30px 32px 70px; width:100%; }
+.content{ padding:30px 32px 150px; width:100%; }
 .view{ animation:fade .2s ease;}
 @keyframes fade{ from{opacity:0;} to{opacity:1;} }
 

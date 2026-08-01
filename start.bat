@@ -21,5 +21,5 @@ echo Backend API:  http://localhost:8000
 echo Frontend App: http://localhost:5173
 echo API Docs:     http://localhost:8000/docs
 echo.
-echo Login with: demo@tallai.com / demo123
+echo Register a new account or sign in with your credentials to get started.
 pause

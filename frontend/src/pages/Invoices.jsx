@@ -1,62 +1,174 @@
-import Topbar from '../components/Topbar.jsx';
-
-const invoices = [
-  { id: 'INV-0031', risk: true, customer: 'Raj Traders', date: '01 Aug 2026', due: '31 Aug 2026', amt: '19,000.00', gst: '3,420.00', total: '22,420.00', status: 'sent', label: 'Sent' },
-  { id: 'INV-0030', risk: false, customer: 'Kumar Brothers', date: '29 Jul 2026', due: '28 Aug 2026', amt: '5,500.00', gst: '275.00', total: '5,775.00', status: 'partial', label: 'Partial' },
-  { id: 'INV-0029', risk: false, customer: 'Raj Traders', date: '26 Jul 2026', due: '25 Aug 2026', amt: '19,000.00', gst: '3,420.00', total: '22,420.00', status: 'overdue', label: 'Overdue' },
-  { id: 'INV-0028', risk: true, customer: 'Raj Traders', date: '23 Jul 2026', due: '22 Aug 2026', amt: '5,500.00', gst: '990.00', total: '6,490.00', status: 'partial', label: 'Partial' },
-  { id: 'INV-0027', risk: false, customer: 'Gupta Pharma', date: '20 Jul 2026', due: '19 Aug 2026', amt: '6,800.00', gst: '1,224.00', total: '8,024.00', status: 'partial', label: 'Partial' },
-  { id: 'INV-0024', risk: false, customer: 'Gupta Pharma', date: '11 Jul 2026', due: '10 Aug 2026', amt: '5,500.00', gst: '275.00', total: '5,775.00', status: 'paid', label: 'Paid' },
-  { id: 'INV-0023', risk: false, customer: 'Gupta Pharma', date: '08 Jul 2026', due: '07 Aug 2026', amt: '19,000.00', gst: '3,420.00', total: '22,420.00', status: 'draft', label: 'Draft' },
-];
+import { useState } from 'react'
+import Topbar from '../components/Topbar.jsx'
+import Modal from '../components/ui/Modal.jsx'
+import InvoiceForm from '../components/forms/InvoiceForm.jsx'
+import { useInvoices } from '../hooks/useInvoices'
+import api from '../api/axios'
+import toast from 'react-hot-toast'
 
 export default function Invoices() {
+  const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [showForm, setShowForm] = useState(false)
+  const [deleteId, setDeleteId] = useState(null)
+  
+  const { items, total, summary, loading, refetch } = useInvoices({ status: statusFilter, search, page, limit: 20 })
+
+  const handleCreate = async (data) => {
+    try {
+      await api.post('/invoices', data)
+      toast.success('Invoice created successfully')
+      setShowForm(false)
+      refetch()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to create invoice')
+    }
+  }
+
+  const markPaid = async (id) => {
+    try {
+      await api.put(`/invoices/${id}/status?status=paid`)
+      toast.success('Invoice marked as paid')
+      refetch()
+    } catch (err) {
+      toast.error('Failed to update invoice status')
+    }
+  }
+
+  const downloadPdf = async (id, number) => {
+    try {
+      const res = await api.get(`/invoices/${id}/pdf`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${number}.pdf`
+      a.click()
+    } catch (err) {
+      toast.error('Failed to download invoice PDF')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    try {
+      await api.delete(`/invoices/${deleteId}`)
+      toast.success('Invoice deleted')
+      setDeleteId(null)
+      refetch()
+    } catch (err) {
+      toast.error('Failed to delete invoice')
+    }
+  }
+
   return (
     <section className="view" id="view-invoices">
       <Topbar title="Invoices" />
 
       <div className="mini-cards">
-        <div className="mini-card"><div className="lab">Total Invoiced</div><div className="val">₹3,25,881.00</div></div>
-        <div className="mini-card"><div className="lab">Total Received</div><div className="val">₹26,886.50</div></div>
-        <div className="mini-card"><div className="lab">Outstanding</div><div className="val">₹2,98,994.50</div></div>
+        <div className="mini-card">
+          <div className="lab">Total Invoiced</div>
+          <div className="val">₹{(summary?.total_invoiced || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+        </div>
+        <div className="mini-card">
+          <div className="lab">Total Received</div>
+          <div className="val">₹{(summary?.total_received || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+        </div>
+        <div className="mini-card">
+          <div className="lab">Outstanding</div>
+          <div className="val">₹{(summary?.total_outstanding || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+        </div>
       </div>
 
       <div className="filters">
-        <input className="search-input" placeholder="Search invoices..." />
-        <select className="select"><option>All Status</option></select>
-        <button className="btn">+ New Invoice</button>
+        <input 
+          className="search-input" 
+          autoComplete="off"
+          placeholder="Search Invoices" 
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select 
+          className="select" 
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="sent">Sent</option>
+          <option value="paid">Paid</option>
+          <option value="partial">Partial</option>
+          <option value="overdue">Overdue</option>
+        </select>
+        <button className="btn" onClick={() => setShowForm(true)}>+ New Invoice</button>
       </div>
 
       <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Invoice #</th><th>Customer</th><th>Date</th><th>Due</th>
-              <th className="num">Amount</th><th className="num">GST</th><th className="num">Total</th>
-              <th>Status</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td className="link mono">{inv.id}{inv.risk && <span className="cell-flag">risk</span>}</td>
-                <td>{inv.customer}</td>
-                <td>{inv.date}</td>
-                <td>{inv.due}</td>
-                <td className="num mono">{inv.amt}</td>
-                <td className="num mono">{inv.gst}</td>
-                <td className="num mono">{inv.total}</td>
-                <td><span className={'badge ' + inv.status}>{inv.label}</span></td>
-                <td className="row-actions">
-                  <a>PDF</a>
-                  {inv.status !== 'paid' && <a>Paid</a>}
-                  <a className="danger">Delete</a>
-                </td>
+        {loading ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Loading live invoices...
+          </div>
+        ) : items.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No invoices found. Click "+ New Invoice" to create one.
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Invoice #</th><th>Customer</th><th>Date</th><th>Due</th>
+                <th className="num">Amount</th><th className="num">GST</th><th className="num">Total</th>
+                <th>Status</th><th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((inv) => (
+                <tr key={inv.id}>
+                  <td className="link mono">{inv.invoice_number}</td>
+                  <td>{inv.customer_name || inv.customer?.name || 'Customer'}</td>
+                  <td>{inv.invoice_date}</td>
+                  <td>{inv.due_date || '-'}</td>
+                  <td className="num mono">₹{(inv.subtotal || inv.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td className="num mono">₹{(inv.total_gst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td className="num mono">₹{(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td>
+                    <span className={`badge ${(inv.status || 'draft').toLowerCase()}`}>
+                      {inv.status || 'Draft'}
+                    </span>
+                  </td>
+                  <td className="row-actions">
+                    <button className="text-link" onClick={() => downloadPdf(inv.id, inv.invoice_number)}>PDF</button>
+                    {inv.status !== 'paid' && (
+                      <button className="text-link" onClick={() => markPaid(inv.id)}>Paid</button>
+                    )}
+                    <button className="text-link danger" onClick={() => setDeleteId(inv.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {/* New Invoice Form Modal */}
+      {showForm && (
+        <Modal open={showForm} title="Create New Invoice" onClose={() => setShowForm(false)}>
+          <InvoiceForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteId && (
+        <Modal open={!!deleteId} title="Confirm Delete" onClose={() => setDeleteId(null)}>
+          <div style={{ padding: '1rem' }}>
+            <p>Are you sure you want to delete this invoice? This action cannot be undone.</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button className="btn secondary" onClick={() => setDeleteId(null)}>Cancel</button>
+              <button className="btn danger" onClick={handleDelete}>Delete Invoice</button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </section>
-  );
+  )
 }

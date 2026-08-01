@@ -1,12 +1,5 @@
 """
 purchase_router.py — Handles purchase bills (bills received from vendors).
-
-Endpoints:
-  POST   /purchases          → create purchase bill, update vendor outstanding, ledger entry
-  GET    /purchases          → list all purchase bills
-  GET    /purchases/{id}     → full purchase bill with items
-  PUT    /purchases/{id}     → update purchase bill
-  POST   /purchases/{id}/payment → record payment to vendor
 """
 from decimal import Decimal
 from datetime import date, timedelta
@@ -17,18 +10,13 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 from database import get_db
-from deps import get_current_user
+from deps import get_current_user, get_org_id
 from features.ledger_engine import create_purchase_ledger, create_ledger_entry
 import models
 import schemas
 
 router = APIRouter()
 
-
-# ---------------------------------------------------------------------------
-# Pydantic schemas (purchase-specific, defined inline since spec doesn't have a
-# separate purchases section in schemas.py)
-# ---------------------------------------------------------------------------
 
 class PurchaseItemCreate(BaseModel):
     item_name: str
@@ -54,65 +42,59 @@ class PurchaseUpdate(BaseModel):
     status: Optional[str] = None
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _calc_purchase_totals(items: list) -> tuple:
-    """Return (subtotal, total_gst, total_amount, computed_items)."""
+def _calc_purchase_totals(items_data):
     subtotal = 0.0
     total_gst = 0.0
-    computed = []
-    for item in items:
-        line_sub = float(item.quantity) * float(item.unit_price)
-        gst_amt = round(line_sub * float(item.gst_rate) / 100, 2)
+    computed_items = []
+    for item in items_data:
+        qty = float(item.quantity)
+        price = float(item.unit_price)
+        line_sub = qty * price
+        gst_rate = float(item.gst_rate)
+        gst_amt = round(line_sub * gst_rate / 100, 2)
         line_total = round(line_sub + gst_amt, 2)
         subtotal += line_sub
         total_gst += gst_amt
-        computed.append({
+        computed_items.append({
             "item_name": item.item_name,
-            "quantity": item.quantity,
-            "unit_price": item.unit_price,
-            "gst_rate": item.gst_rate,
+            "quantity": qty,
+            "unit_price": price,
+            "gst_rate": gst_rate,
             "gst_amount": gst_amt,
             "total_amount": line_total,
         })
     total_amount = round(subtotal + total_gst, 2)
-    return round(subtotal, 2), round(total_gst, 2), total_amount, computed
+    return round(subtotal, 2), round(total_gst, 2), total_amount, computed_items
 
 
-def _purchase_to_dict(purchase, vendor=None):
+def _purchase_to_dict(p, vendor=None):
     return {
-        "id": purchase.id,
-        "vendor_id": purchase.vendor_id,
+        "id": p.id,
+        "vendor_id": p.vendor_id,
         "vendor_name": vendor.name if vendor else None,
-        "bill_number": purchase.bill_number,
-        "bill_date": str(purchase.bill_date),
-        "due_date": str(purchase.due_date) if purchase.due_date else None,
-        "subtotal": float(purchase.subtotal or 0),
-        "total_gst": float(purchase.total_gst or 0),
-        "total_amount": float(purchase.total_amount),
-        "paid_amount": float(purchase.paid_amount or 0),
-        "balance_due": float(purchase.balance_due),
-        "status": purchase.status.value if hasattr(purchase.status, "value") else purchase.status,
-        "notes": purchase.notes,
+        "bill_number": p.bill_number,
+        "bill_date": str(p.bill_date),
+        "due_date": str(p.due_date) if p.due_date else None,
+        "subtotal": float(p.subtotal),
+        "total_gst": float(p.total_gst),
+        "total_amount": float(p.total_amount),
+        "paid_amount": float(p.paid_amount),
+        "balance_due": float(p.balance_due),
+        "status": p.status.value if hasattr(p.status, "value") else p.status,
+        "notes": p.notes,
         "items": [
             {
                 "item_name": i.item_name,
-                "quantity": float(i.quantity or 0),
-                "unit_price": float(i.unit_price or 0),
-                "gst_rate": float(i.gst_rate or 0),
-                "gst_amount": float(i.gst_amount or 0),
-                "total_amount": float(i.total_amount or 0),
+                "quantity": float(i.quantity),
+                "unit_price": float(i.unit_price),
+                "gst_rate": float(i.gst_rate),
+                "gst_amount": float(i.gst_amount),
+                "total_amount": float(i.total_amount),
             }
-            for i in purchase.items
+            for i in getattr(p, 'items', [])
         ],
     }
 
-
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
 
 @router.post("")
 def create_purchase(
@@ -120,9 +102,10 @@ def create_purchase(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     vendor = (
         db.query(models.Vendor)
-        .filter(models.Vendor.id == data.vendor_id, models.Vendor.user_id == user.id)
+        .filter(models.Vendor.id == data.vendor_id, models.Vendor.user_id == org_id)
         .first()
     )
     if not vendor:
@@ -131,7 +114,7 @@ def create_purchase(
     subtotal, total_gst, total_amount, computed = _calc_purchase_totals(data.items)
 
     purchase = models.PurchaseInvoice(
-        user_id=user.id,
+        user_id=org_id,
         vendor_id=data.vendor_id,
         bill_number=data.bill_number,
         bill_date=data.bill_date,
@@ -158,11 +141,8 @@ def create_purchase(
             total_amount=Decimal(str(ci["total_amount"])),
         ))
 
-    # Update vendor outstanding
     vendor.outstanding = Decimal(str(float(vendor.outstanding) + total_amount))
-
-    # Create ledger entries (Purchases Dr, Vendor Cr)
-    create_purchase_ledger(db, user.id, purchase, vendor.name)
+    create_purchase_ledger(db, org_id, purchase, vendor.name)
 
     db.commit()
     db.refresh(purchase)
@@ -180,10 +160,11 @@ def list_purchases(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     q = (
         db.query(models.PurchaseInvoice)
         .options(joinedload(models.PurchaseInvoice.items), joinedload(models.PurchaseInvoice.vendor))
-        .filter(models.PurchaseInvoice.user_id == user.id)
+        .filter(models.PurchaseInvoice.user_id == org_id)
     )
     if vendor_id:
         q = q.filter(models.PurchaseInvoice.vendor_id == vendor_id)
@@ -209,9 +190,9 @@ def list_purchases(
         "page": page,
         "limit": limit,
         "summary": {
-            "total_billed": float(summary[0] or 0),
-            "total_paid": float(summary[1] or 0),
-            "total_outstanding": float(summary[2] or 0),
+            "total_billed": float(summary[0] or 0) if summary else 0,
+            "total_paid": float(summary[1] or 0) if summary else 0,
+            "total_outstanding": float(summary[2] or 0) if summary else 0,
         },
     }
 
@@ -222,10 +203,11 @@ def get_purchase(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     purchase = (
         db.query(models.PurchaseInvoice)
         .options(joinedload(models.PurchaseInvoice.items), joinedload(models.PurchaseInvoice.vendor))
-        .filter(models.PurchaseInvoice.id == purchase_id, models.PurchaseInvoice.user_id == user.id)
+        .filter(models.PurchaseInvoice.id == purchase_id, models.PurchaseInvoice.user_id == org_id)
         .first()
     )
     if not purchase:
@@ -240,9 +222,10 @@ def update_purchase(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     purchase = (
         db.query(models.PurchaseInvoice)
-        .filter(models.PurchaseInvoice.id == purchase_id, models.PurchaseInvoice.user_id == user.id)
+        .filter(models.PurchaseInvoice.id == purchase_id, models.PurchaseInvoice.user_id == org_id)
         .first()
     )
     if not purchase:
@@ -271,10 +254,11 @@ def record_vendor_payment(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     purchase = (
         db.query(models.PurchaseInvoice)
         .options(joinedload(models.PurchaseInvoice.vendor))
-        .filter(models.PurchaseInvoice.id == purchase_id, models.PurchaseInvoice.user_id == user.id)
+        .filter(models.PurchaseInvoice.id == purchase_id, models.PurchaseInvoice.user_id == org_id)
         .first()
     )
     if not purchase:
@@ -294,16 +278,15 @@ def record_vendor_payment(
     if purchase.vendor:
         purchase.vendor.outstanding = Decimal(str(max(0, float(purchase.vendor.outstanding) - apply)))
 
-    # Ledger: Dr. Vendor A/c (reduces liability), Cr. Cash/Bank
     vendor_name = purchase.vendor.name if purchase.vendor else "Vendor"
     create_ledger_entry(
-        db, user.id, f"Vendor - {vendor_name}", "liability",
+        db, org_id, f"Vendor - {vendor_name}", "liability",
         apply, 0,
         f"Payment for bill {purchase.bill_number or purchase_id}",
         "purchase_payment", purchase_id, pdate,
     )
     create_ledger_entry(
-        db, user.id, "Cash/Bank", "asset",
+        db, org_id, "Cash/Bank", "asset",
         0, apply,
         f"Payment to {vendor_name}",
         "purchase_payment", purchase_id, pdate,
@@ -319,10 +302,6 @@ def record_vendor_payment(
     }
 
 
-# ---------------------------------------------------------------------------
-# AI tool function — called from intent_router when user asks to create purchase
-# ---------------------------------------------------------------------------
-
 async def create_purchase_from_ai(tool_input: dict, user_id: int, db) -> dict:
     from datetime import datetime
 
@@ -333,7 +312,6 @@ async def create_purchase_from_ai(tool_input: dict, user_id: int, db) -> dict:
         .first()
     )
     if not vendor:
-        # Create vendor on the fly if not found
         vendor = models.Vendor(user_id=user_id, name=vendor_name, state="Gujarat")
         db.add(vendor)
         db.flush()
@@ -348,49 +326,18 @@ async def create_purchase_from_ai(tool_input: dict, user_id: int, db) -> dict:
             gst_rate=float(item.get("gst_rate", 18)),
         ))
 
-    bill_date_str = tool_input.get("bill_date")
-    if bill_date_str:
-        bill_date = datetime.strptime(bill_date_str, "%Y-%m-%d").date()
+    b_date = tool_input.get("bill_date")
+    if b_date:
+        b_date = datetime.strptime(b_date, "%Y-%m-%d").date()
     else:
-        bill_date = date.today()
+        b_date = date.today()
 
-    subtotal, total_gst, total_amount, computed = _calc_purchase_totals(items)
-
-    purchase = models.PurchaseInvoice(
-        user_id=user_id,
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    data = PurchaseCreate(
         vendor_id=vendor.id,
         bill_number=tool_input.get("bill_number"),
-        bill_date=bill_date,
-        due_date=bill_date + timedelta(days=30),
-        subtotal=Decimal(str(subtotal)),
-        total_gst=Decimal(str(total_gst)),
-        total_amount=Decimal(str(total_amount)),
-        paid_amount=Decimal("0"),
-        balance_due=Decimal(str(total_amount)),
-        status=models.PurchaseStatus.pending,
+        bill_date=b_date,
+        notes=tool_input.get("notes"),
+        items=items,
     )
-    db.add(purchase)
-    db.flush()
-
-    for ci in computed:
-        db.add(models.PurchaseItem(
-            purchase_id=purchase.id,
-            item_name=ci["item_name"],
-            quantity=Decimal(str(ci["quantity"])),
-            unit_price=Decimal(str(ci["unit_price"])),
-            gst_rate=Decimal(str(ci["gst_rate"])),
-            gst_amount=Decimal(str(ci["gst_amount"])),
-            total_amount=Decimal(str(ci["total_amount"])),
-        ))
-
-    vendor.outstanding = Decimal(str(float(vendor.outstanding) + total_amount))
-    create_purchase_ledger(db, user_id, purchase, vendor.name)
-    db.commit()
-
-    return {
-        "success": True,
-        "purchase_id": purchase.id,
-        "vendor": vendor.name,
-        "total_amount": total_amount,
-        "bill_number": purchase.bill_number,
-    }
+    return create_purchase(data, user, db)

@@ -17,7 +17,15 @@ export default function TopBar({ title, onMenuClick }) {
         </button>
         <h1 className="text-lg md:text-xl font-semibold text-gray-900 truncate">{title}</h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
+        <button
+          onClick={() => navigate('/organization')}
+          className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 border border-slate-200 transition"
+          title="Organization Details & Team"
+        >
+          <span>🏢</span>
+          <span className="hidden sm:inline">Org Details</span>
+        </button>
         <span className="text-sm text-gray-600 max-w-[120px] md:max-w-none truncate">{user?.business_name || user?.name}</span>
         <button
           onClick={() => { logout(); navigate('/login') }}
@@ -26,6 +34,7 @@ export default function TopBar({ title, onMenuClick }) {
           Logout
         </button>
       </div>
+
     </header>
   )
 }

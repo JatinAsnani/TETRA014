@@ -89,11 +89,11 @@ export default function GreenScreenCat({ videoSrc = '/cat_login.mp4', width = 54
         ref={canvasRef}
         width={width}
         height={height}
+        className="cat-canvas"
         style={{
           width,
           height,
           display: 'block',
-          filter: 'drop-shadow(0 16px 36px rgba(0,0,0,0.6))',
         }}
       />
     </div>

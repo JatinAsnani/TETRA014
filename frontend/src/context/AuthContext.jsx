@@ -10,43 +10,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('tallai_token')
     if (token) {
-      if (token === 'demo-local-jwt-token') {
-        setUser({ id: 1, email: 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' })
-        setLoading(false)
-        return
-      }
       api.get('/auth/me')
         .then(res => setUser(res.data))
         .catch(() => {
-          setUser({ id: 1, email: 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' })
+          localStorage.removeItem('tallai_token')
+          setUser(null)
         })
         .finally(() => setLoading(false))
     } else {
-      // Default demo logged-in user
-      setUser({ id: 1, email: 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' })
+      setUser(null)
       setLoading(false)
     }
   }, [])
 
+
   const login = async (email, password) => {
-    try {
-      const res = await api.post('/auth/login/json', { email, password })
-      localStorage.setItem('tallai_token', res.data.access_token)
-      setUser(res.data.user)
-      return res.data
-    } catch (err) {
-      try {
-        const res = await api.post('/auth/login/json', { email: 'demo@tallai.com', password: 'demo123' })
-        localStorage.setItem('tallai_token', res.data.access_token)
-        setUser(res.data.user)
-        return res.data
-      } catch (e) {
-        const mockUser = { id: 1, email: email || 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' }
-        localStorage.setItem('tallai_token', 'demo-local-jwt-token')
-        setUser(mockUser)
-        return { access_token: 'demo-local-jwt-token', user: mockUser }
-      }
-    }
+    const res = await api.post('/auth/login/json', { email, password })
+    localStorage.setItem('tallai_token', res.data.access_token)
+    setUser(res.data.user)
+    return res.data
   }
 
   const register = async (data) => {
@@ -67,11 +49,20 @@ export function AuthProvider({ children }) {
     return res.data
   }
 
+  const googleLogin = async (tokenOrData) => {
+    const payload = typeof tokenOrData === 'string' ? { token: tokenOrData } : tokenOrData
+    const res = await api.post('/auth/google', payload)
+    localStorage.setItem('tallai_token', res.data.access_token)
+    setUser(res.data.user)
+    return res.data
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, googleLogin }}>
       {children}
     </AuthContext.Provider>
   )
+
 }
 
 export function useAuth() {

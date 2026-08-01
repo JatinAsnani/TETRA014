@@ -4,7 +4,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine, Base
+from database import engine, Base, run_migrations
 import models
 from routers import (
     auth_router, chat_router, invoice_router, expense_router,
@@ -14,7 +14,7 @@ from routers import (
 )
 from features.reminder_scheduler import start_scheduler
 
-app = FastAPI(title="FRIDAY API", version="1.0.0")
+app = FastAPI(title="TallAI API", version="1.0.0")
 
 frontend_url = os.getenv("FRONTEND_URL")
 origins = [
@@ -55,16 +55,20 @@ app.include_router(purchase_router.router, prefix="/purchases", tags=["Purchases
 app.include_router(invoice_risk_router.router, prefix="/invoice-risk", tags=["Invoice Risk Scanner"])
 
 
-from seed_data import seed_database
-
 @app.on_event("startup")
 def on_startup():
+    run_migrations()
     Base.metadata.create_all(bind=engine)
+    if os.getenv("AUTO_SEED", "").lower() in ("1", "true", "yes"):
+        try:
+            seed_database()
+        except Exception as e:
+            print(f"Error seeding database: {e}")
     try:
-        seed_database()
+        start_scheduler()
     except Exception as e:
-        print(f"Error seeding database: {e}")
-    start_scheduler()
+        print(f"Scheduler info: {e}")
+
 
 
 @app.get("/")

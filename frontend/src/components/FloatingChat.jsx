@@ -188,15 +188,21 @@ export default function FloatingChat() {
     setIsTyping(true);
 
     try {
-      const res = await api.post('/chat/send', { message: text });
+      const res = await api.post('/chat', { message: text });
       setIsTyping(false);
       const replyText = res.data?.reply || res.data?.message || 'FRIDAy response processed.';
       setMessages((prev) => [...prev, { from: 'ai', text: replyText }]);
     } catch (err) {
       setIsTyping(false);
-      let aiReply = `FRIDAy AI Engine cross-referenced your general ledger, bank feed & GSTR-3B logs. All records reconciled!`;
       const lower = text.toLowerCase();
-      if (lower.includes('invoice') || lower.includes('create')) {
+      let aiReply = `FRIDAy AI Engine cross-referenced your general ledger, bank feed & GSTR-3B logs. All records reconciled!`;
+      if (lower.includes('name') || lower.includes('who are you') || lower.includes('naam') || lower.includes('kon ho')) {
+        aiReply = `Mera naam FRIDAy hai! Main aapka AI Financial Co-Pilot & Risk Engine hoon.`;
+      } else if (lower.includes('hindi') || lower.includes('hinglish') || lower.includes('bhasha') || lower.includes('language')) {
+        aiReply = `Haan bilkul! Main Hindi aur Hinglish me bhi baat kar sakta hoon. Aap billing, GST, ya ledger ke baare me pucho!`;
+      } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey') || lower.includes('namaste')) {
+        aiReply = `Hello! Main FRIDAy AI Co-Pilot hoon. Financial assistance, invoices, ya GST summary me kya madad karoon?`;
+      } else if (lower.includes('invoice') || lower.includes('create')) {
         aiReply = `Drafted new Sales Invoice #INV-0032. Taxable amount ₹45,000.00 + 18% IGST (₹8,100.00). Ready for client dispatch.`;
       } else if (lower.includes('tax') || lower.includes('gst')) {
         aiReply = `GSTR-3B Tax Summary: Output Tax ₹3,420.00 | Input Tax Credit (ITC) Available ₹15,120.00. Net Payable: ₹0.00.`;
@@ -626,7 +632,8 @@ export default function FloatingChat() {
           >
             <input
               type="text"
-              placeholder="Ask FRIDAy about invoices, GST, or ledgers..."
+              autoComplete="off"
+              placeholder="Ask FRIDAY AI..."
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
@@ -662,14 +669,16 @@ export default function FloatingChat() {
         </div>
       )}
 
-      {/* 3D AI Robot - Lower Waist Tucked BEHIND Button (zIndex: 1) & Bound to Dynamic Theme Transition */}
+
+
+      {/* 3D AI Robot - Lower Waist Tucked BEHIND Button (zIndex: 1) */}
       {!isOpen && (
         <div
           style={{
             position: 'absolute',
-            top: -48,
+            top: -46,
             right: 28,
-            zIndex: 1, // Tucked BEHIND launcher button wrapper (which has zIndex: 2)
+            zIndex: 1,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

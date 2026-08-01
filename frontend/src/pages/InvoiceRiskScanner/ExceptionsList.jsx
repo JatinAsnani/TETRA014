@@ -69,10 +69,11 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
 
         {/* Search & Sort Controls */}
         <div className="flex items-center gap-3">
-          <form onSubmit={handleSearchSubmit} className="relative flex-1 md:w-60">
+          <form onSubmit={handleSearchSubmit} autoComplete="off" className="relative flex-1 md:w-60">
             <input
               type="text"
-              placeholder="Search invoice or vendor..."
+              autoComplete="off"
+              placeholder="Search Invoices or Vendors"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
