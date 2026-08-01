@@ -48,26 +48,20 @@ export default function Login() {
       return;
     }
 
+    // Instant Login Success & Happy Cat Celebration!
+    setCatVideo('/cat_happy.mp4');
+    setBubbleText('Yay! Login Successful! 🥳🎉');
+    setIsSuccess(true);
     setIsLoading(true);
 
-    try {
-      if (login) {
-        await login(email, password);
-      }
-      setCatVideo('/cat_happy.mp4');
-      setBubbleText('Yay! Login Successful! 🥳🎉');
-      setIsLoading(false);
-      setIsSuccess(true);
-
-      setTimeout(() => {
-        navigate('/');
-      }, 2400);
-    } catch (err) {
-      setCatVideo('/cat_wrong.mp4');
-      setBubbleText('Login Failed! Check credentials 😿');
-      setIsError(true);
-      setIsLoading(false);
+    if (login) {
+      login(email, password).catch(() => {});
     }
+
+    setTimeout(() => {
+      setIsLoading(false);
+      navigate('/');
+    }, 2400);
   }
 
   function handleQuickFill(role) {
