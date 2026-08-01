@@ -48,7 +48,7 @@ export default function Login() {
       return;
     }
 
-    // Success flow: Play happy cat video!
+    // Success flow: Play happy cat video and hide login box!
     setCatVideo('/cat_happy.mp4');
     setBubbleText('Yay! Login Successful! 🥳🎉');
     setIsLoading(true);
@@ -61,13 +61,12 @@ export default function Login() {
       console.log('Login error fallback:', err);
     }
 
+    setIsLoading(false);
+    setIsSuccess(true);
+
     setTimeout(() => {
-      setIsLoading(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        navigate('/');
-      }, 1800);
-    }, 1500);
+      navigate('/');
+    }, 2400);
   }
 
   function handleQuickFill(role) {
@@ -151,7 +150,7 @@ export default function Login() {
               transition: 'all 0.3s ease',
             }}
           >
-            <span style={{ fontSize: 22 }}>{isError ? '😾' : '🐱'}</span> {bubbleText}
+            <span style={{ fontSize: 22 }}>{isError ? '😾' : (isSuccess ? '🥳' : '🐱')}</span> {bubbleText}
             {/* Speech Pointer Arrow */}
             <div
               style={{
@@ -170,25 +169,45 @@ export default function Login() {
 
           {/* Extra Large Real-time Green Screen Keyed-Out Cat Canvas (540px x 540px) */}
           <GreenScreenCat videoSrc={catVideo} width={540} height={540} />
+
+          {/* Animated Progress Bar Below Cat Video on Login Success */}
+          {isSuccess && (
+            <div style={{ width: 360, marginTop: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary-color)', marginBottom: 8, letterSpacing: '0.04em' }}>
+                REDIRECTING TO FRIDAY DASHBOARD...
+              </div>
+              <div style={{ width: '100%', height: 8, background: 'rgba(255, 255, 255, 0.1)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #06B6D4, #14B8A6, #10B981)',
+                    borderRadius: 10,
+                    animation: 'loadingProgress 2.2s ease-in-out forwards',
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Glassmorphic Login Box */}
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 450,
-            background: 'var(--card-bg)',
-            border: `2px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
-            borderRadius: 24,
-            padding: '36px 30px',
-            boxShadow: 'none',
-            backdropFilter: 'blur(20px)',
-            position: 'relative',
-            zIndex: 12,
-            color: 'var(--text)',
-            transition: 'all 0.3s ease',
-          }}
-        >
+        {/* Glassmorphic Login Box — Hidden when login is successful */}
+        {!isSuccess && (
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 450,
+              background: 'var(--card-bg)',
+              border: `2px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
+              borderRadius: 24,
+              padding: '36px 30px',
+              boxShadow: 'none',
+              backdropFilter: 'blur(20px)',
+              position: 'relative',
+              zIndex: 12,
+              color: 'var(--text)',
+              transition: 'all 0.3s ease',
+            }}
+          >
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 22 }}>
             <div
@@ -452,6 +471,7 @@ export default function Login() {
             </span>
           </div>
         </div>
+      )}
       </div>
 
       <style>{`

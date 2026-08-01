@@ -27,6 +27,11 @@
   initial-value: #14B8A6;
 }
 
+@keyframes loadingProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
 :root, [data-theme="dark"] {
   --bg-color:         #0A0E17; /* 1. Background Color */
   --primary-color:    #06B6D4; /* 2. Primary Color: Vibrant Aqua Blue */
