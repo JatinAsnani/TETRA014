@@ -106,41 +106,6 @@ export default function Login() {
         background: 'var(--bg)',
       }}
     >
-      {/* Ambient Glowing Background Orbs */}
-      {/* Ambient Glowing Background Orbs */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '15%',
-          left: '8%',
-          width: 480,
-          height: 480,
-          borderRadius: '50%',
-          background: 'var(--primary-color)',
-          filter: 'blur(170px)',
-          opacity: 0.28,
-          pointerEvents: 'none',
-          transition: 'background 0.4s ease',
-          animation: 'pulseGlow 6s ease-in-out infinite alternate',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '10%',
-          right: '8%',
-          width: 500,
-          height: 500,
-          borderRadius: '50%',
-          background: 'var(--chatbot-primary-color)',
-          filter: 'blur(190px)',
-          opacity: 0.28,
-          pointerEvents: 'none',
-          transition: 'background 0.4s ease',
-          animation: 'pulseGlow 8s ease-in-out infinite alternate-reverse',
-        }}
-      />
-
       {/* Main Stage Container (Extra Large Cat Video + Speech Bubble + Login Box) */}
       <div
         style={{
@@ -169,7 +134,7 @@ export default function Login() {
           <div
             style={{
               background: 'var(--card-bg)',
-              border: '2.5px solid var(--primary-color)',
+              border: `2.5px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
               color: 'var(--text)',
               fontSize: 16,
               fontWeight: 900,
@@ -197,8 +162,8 @@ export default function Login() {
                 width: 14,
                 height: 14,
                 background: 'var(--card-bg)',
-                borderRight: '2.5px solid var(--primary-color)',
-                borderBottom: '2.5px solid var(--primary-color)',
+                borderRight: `2.5px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
+                borderBottom: `2.5px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
               }}
             />
           </div>
@@ -213,7 +178,7 @@ export default function Login() {
             width: '100%',
             maxWidth: 450,
             background: 'var(--card-bg)',
-            border: '2px solid var(--primary-color)',
+            border: `2px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
             borderRadius: 24,
             padding: '36px 30px',
             boxShadow: 'none',
@@ -348,7 +313,7 @@ export default function Login() {
                   padding: '12px 14px',
                   borderRadius: 10,
                   background: 'var(--page)',
-                  border: '1.5px solid var(--border-subtle)',
+                  border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
                   color: 'var(--text)',
                   fontSize: 14,
                   fontWeight: 600,
@@ -386,7 +351,7 @@ export default function Login() {
                     padding: '12px 42px 12px 14px',
                     borderRadius: 10,
                     background: 'var(--page)',
-                    border: '1.5px solid var(--border-subtle)',
+                    border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
                     color: 'var(--text)',
                     fontSize: 14,
                     fontWeight: 600,
