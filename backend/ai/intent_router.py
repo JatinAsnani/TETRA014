@@ -145,7 +145,7 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
 
     return {
         "reply": (
-            "Main TallAI hoon — aapka accounting assistant. "
+            "Main FRIDAY hoon — aapka accounting assistant. "
             "Aap mujhse ye keh sakte hain:\n"
             "• 'Raj Traders ka outstanding kya hai?'\n"
             "• 'Is mahine ki sales dikhao'\n"

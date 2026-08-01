@@ -14,7 +14,7 @@ from routers import (
 )
 from features.reminder_scheduler import start_scheduler
 
-app = FastAPI(title="TallAI API", version="1.0.0")
+app = FastAPI(title="FRIDAY API", version="1.0.0")
 
 frontend_url = os.getenv("FRONTEND_URL")
 origins = [
@@ -69,9 +69,9 @@ def on_startup():
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "app": "TallAI API"}
+    return {"status": "ok", "app": "FRIDAY API"}
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "app": "TallAI"}
+    return {"status": "ok", "app": "FRIDAY"}

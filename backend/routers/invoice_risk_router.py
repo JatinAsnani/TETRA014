@@ -212,7 +212,7 @@ def _build_db_exceptions(user_id: int, db: Session) -> List[Dict[str, Any]]:
                 "exception_type": "DUPLICATE_INVOICE",
                 "classification": "VERIFIED_MISMATCH",
                 "risk_score": 95,
-                "description": f"Database Duplicate Invoice: Invoice #{target['invoice_number']} already exists in your TallAI database (Record dated {getattr(matched_rec, 'bill_date', getattr(matched_rec, 'invoice_date', ''))}).",
+                "description": f"Database Duplicate Invoice: Invoice #{target['invoice_number']} already exists in your FRIDAY database (Record dated {getattr(matched_rec, 'bill_date', getattr(matched_rec, 'invoice_date', ''))}).",
                 "resolved": is_resolved,
                 "resolution_note": "Resolved after verification." if is_resolved else None,
                 "follow_up_question": f"Invoice #{target['invoice_number']} for {v_name} already exists in database.",
@@ -382,7 +382,7 @@ def reconcile_invoice(
         "status": "RECONCILED",
         "exceptions_found": len(all_exceptions),
         "exceptions": all_exceptions,
-        "message": f"Found {len(all_exceptions)} discrepancy flag(s) during cross-document reconciliation!" if all_exceptions else "Invoice verified cleanly against TallAI database records."
+        "message": f"Found {len(all_exceptions)} discrepancy flag(s) during cross-document reconciliation!" if all_exceptions else "Invoice verified cleanly against FRIDAY database records."
     }
 
 

@@ -41,7 +41,7 @@ def get_plain_model():
         return genai.GenerativeModel(
             model_name="gemini-2.5-flash",
             system_instruction=(
-                "You are TallAI, an intelligent accounting assistant for Indian small businesses. "
+                "You are FRIDAY, an intelligent accounting assistant for Indian small businesses. "
                 "Reply in the same language the user used (Hindi/Hinglish or English). "
                 "Be concise and helpful."
             ),

@@ -16,7 +16,7 @@ export default function Login() {
     setLoading(true)
     try {
       await login(email, password)
-      toast.success('Welcome to TallAI!')
+      toast.success('Welcome to FRIDAY!')
       navigate('/')
     } catch (err) {
       toast.error(getErrorMessage(err, 'Login failed'))
@@ -29,7 +29,7 @@ export default function Login() {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">TallAI</h1>
+          <h1 className="text-2xl font-bold text-gray-900">FRIDAY</h1>
           <p className="text-gray-500 text-sm mt-1">AI-Powered Accounting</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
