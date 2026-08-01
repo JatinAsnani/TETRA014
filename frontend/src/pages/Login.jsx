@@ -48,25 +48,26 @@ export default function Login() {
       return;
     }
 
-    // Success flow: Play happy cat video and hide login box!
-    setCatVideo('/cat_happy.mp4');
-    setBubbleText('Yay! Login Successful! 🥳🎉');
     setIsLoading(true);
 
     try {
       if (login) {
-        await login(email, password).catch(() => {});
+        await login(email, password);
       }
+      setCatVideo('/cat_happy.mp4');
+      setBubbleText('Yay! Login Successful! 🥳🎉');
+      setIsLoading(false);
+      setIsSuccess(true);
+
+      setTimeout(() => {
+        navigate('/');
+      }, 2400);
     } catch (err) {
-      console.log('Login error fallback:', err);
+      setCatVideo('/cat_wrong.mp4');
+      setBubbleText('Login Failed! Check credentials 😿');
+      setIsError(true);
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-    setIsSuccess(true);
-
-    setTimeout(() => {
-      navigate('/');
-    }, 2400);
   }
 
   function handleQuickFill(role) {
