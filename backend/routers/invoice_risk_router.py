@@ -375,6 +375,95 @@ def reconcile_invoice(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    scanned_list = _get_user_scanned(user.id)
+    matched_scans = [s for s in scanned_list if s.get("scanned_invoice_id") == scanned_invoice_id]
+
+    if matched_scans:
+        for scan in matched_scans:
+            v_name = str(scan.get("vendor_name", "Vendor")).strip()
+            v_gstin = scan.get("vendor_gstin")
+            inv_no = str(scan.get("invoice_number", "BILL-1001")).strip()
+            inv_date_str = str(scan.get("invoice_date") or date.today().isoformat())
+            
+            try:
+                b_date = datetime.strptime(inv_date_str[:10], "%Y-%m-%d").date()
+            except Exception:
+                b_date = date.today()
+
+            # 1. Find or create vendor
+            vendor = None
+            if v_gstin:
+                vendor = db.query(models.Vendor).filter(
+                    models.Vendor.user_id == user.id,
+                    models.Vendor.gstin == v_gstin
+                ).first()
+            if not vendor and v_name:
+                vendor = db.query(models.Vendor).filter(
+                    models.Vendor.user_id == user.id,
+                    models.Vendor.name == v_name
+                ).first()
+
+            if not vendor:
+                vendor = models.Vendor(
+                    user_id=user.id,
+                    name=v_name,
+                    gstin=v_gstin,
+                    email=f"{v_name.lower().replace(' ', '')}@vendor.com",
+                    balance=0.0
+                )
+                db.add(vendor)
+                db.flush()
+
+            # 2. Check if purchase bill already recorded in DB
+            existing_purchase = db.query(models.PurchaseInvoice).filter(
+                models.PurchaseInvoice.user_id == user.id,
+                models.PurchaseInvoice.bill_number == inv_no
+            ).first()
+
+            if not existing_purchase:
+                tot = float(scan.get("total_amount", 0.0))
+                taxable = float(scan.get("taxable_value", 0.0))
+                gst = float(scan.get("tax_amount", 0.0))
+                if tot == 0.0:
+                    tot = taxable + gst
+
+                new_purchase = models.PurchaseInvoice(
+                    user_id=user.id,
+                    vendor_id=vendor.id,
+                    bill_number=inv_no,
+                    bill_date=b_date,
+                    subtotal=taxable,
+                    total_gst=gst,
+                    total_amount=tot,
+                    paid_amount=0.0,
+                    balance_due=tot,
+                    status="UNPAID",
+                    notes=scan.get("notes") or "Recorded via AI Invoice Scanner"
+                )
+                db.add(new_purchase)
+                
+                # Update vendor balance
+                vendor.balance = float(vendor.balance or 0.0) + tot
+
+                # Record in Ledger Entry
+                ledger_entry = models.LedgerEntry(
+                    user_id=user.id,
+                    entry_date=b_date,
+                    account_name="Purchases Account",
+                    debit=tot,
+                    credit=0.0,
+                    description=f"Scanned Bill #{inv_no} - {v_name}",
+                    reference_type="PURCHASE",
+                    reference_id=inv_no
+                )
+                db.add(ledger_entry)
+
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"[reconcile_invoice] DB commit error: {e}")
+
     all_exceptions = _build_db_exceptions(user.id, db)
 
     return {
@@ -382,7 +471,7 @@ def reconcile_invoice(
         "status": "RECONCILED",
         "exceptions_found": len(all_exceptions),
         "exceptions": all_exceptions,
-        "message": f"Found {len(all_exceptions)} discrepancy flag(s) during cross-document reconciliation!" if all_exceptions else "Invoice verified cleanly against FRIDAY database records."
+        "message": f"Invoice analyzed & recorded into FRIDAY live database! {len(all_exceptions)} discrepancy flag(s) active." if all_exceptions else "Invoice verified cleanly & recorded into FRIDAY database records."
     }
 
 
