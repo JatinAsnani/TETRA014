@@ -107,6 +107,7 @@ export default function Login() {
       }}
     >
       {/* Ambient Glowing Background Orbs */}
+      {/* Ambient Glowing Background Orbs */}
       <div
         style={{
           position: 'absolute',
@@ -115,7 +116,7 @@ export default function Login() {
           width: 480,
           height: 480,
           borderRadius: '50%',
-          background: isError ? '#EF4444' : 'var(--primary-color)',
+          background: 'var(--primary-color)',
           filter: 'blur(170px)',
           opacity: 0.28,
           pointerEvents: 'none',
@@ -131,7 +132,7 @@ export default function Login() {
           width: 500,
           height: 500,
           borderRadius: '50%',
-          background: isError ? '#DC2626' : 'var(--chatbot-primary-color)',
+          background: 'var(--chatbot-primary-color)',
           filter: 'blur(190px)',
           opacity: 0.28,
           pointerEvents: 'none',
@@ -167,14 +168,14 @@ export default function Login() {
           {/* Dynamic Speech Bubble */}
           <div
             style={{
-              background: isError ? '#FEF2F2' : 'var(--card-bg)',
-              border: `2.5px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
-              color: isError ? '#991B1B' : 'var(--text)',
+              background: 'var(--card-bg)',
+              border: '2.5px solid var(--primary-color)',
+              color: 'var(--text)',
               fontSize: 16,
               fontWeight: 900,
               padding: '12px 26px',
               borderRadius: 24,
-              boxShadow: isError ? '0 12px 36px rgba(239, 68, 68, 0.45)' : '0 12px 36px rgba(0,0,0,0.45), 0 0 20px var(--effects-color)',
+              boxShadow: '0 12px 36px rgba(0,0,0,0.45), 0 0 20px var(--effects-color)',
               marginBottom: 10,
               whiteSpace: 'nowrap',
               position: 'relative',
@@ -195,9 +196,9 @@ export default function Login() {
                 transform: 'translateX(-50%) rotate(45deg)',
                 width: 14,
                 height: 14,
-                background: isError ? '#FEF2F2' : 'var(--card-bg)',
-                borderRight: `2.5px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
-                borderBottom: `2.5px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
+                background: 'var(--card-bg)',
+                borderRight: '2.5px solid var(--primary-color)',
+                borderBottom: '2.5px solid var(--primary-color)',
               }}
             />
           </div>
@@ -212,10 +213,10 @@ export default function Login() {
             width: '100%',
             maxWidth: 450,
             background: 'var(--card-bg)',
-            border: `2px solid ${isError ? '#EF4444' : 'var(--primary-color)'}`,
+            border: '2px solid var(--primary-color)',
             borderRadius: 24,
             padding: '36px 30px',
-            boxShadow: isError ? '0 30px 80px rgba(239, 68, 68, 0.35)' : '0 30px 80px rgba(0, 0, 0, 0.45), 0 0 24px var(--effects-color)',
+            boxShadow: '0 30px 80px rgba(0, 0, 0, 0.45), 0 0 24px var(--effects-color)',
             backdropFilter: 'blur(20px)',
             position: 'relative',
             zIndex: 12,
@@ -347,7 +348,7 @@ export default function Login() {
                   padding: '12px 14px',
                   borderRadius: 10,
                   background: 'var(--page)',
-                  border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
+                  border: '1.5px solid var(--border-subtle)',
                   color: 'var(--text)',
                   fontSize: 14,
                   fontWeight: 600,
@@ -385,7 +386,7 @@ export default function Login() {
                     padding: '12px 42px 12px 14px',
                     borderRadius: 10,
                     background: 'var(--page)',
-                    border: `1.5px solid ${isError ? '#EF4444' : 'var(--border-subtle)'}`,
+                    border: '1.5px solid var(--border-subtle)',
                     color: 'var(--text)',
                     fontSize: 14,
                     fontWeight: 600,
@@ -434,12 +435,12 @@ export default function Login() {
                 padding: '14px',
                 borderRadius: 12,
                 border: 'none',
-                background: isError ? '#EF4444' : (isSuccess ? '#10B981' : 'var(--primary-color)'),
+                background: isSuccess ? '#10B981' : 'var(--primary-color)',
                 color: '#FFFFFF',
                 fontSize: 15,
                 fontWeight: 900,
                 cursor: isLoading ? 'wait' : 'pointer',
-                boxShadow: isError ? '0 8px 24px rgba(239, 68, 68, 0.4)' : '0 8px 24px var(--effects-color)',
+                boxShadow: '0 8px 24px var(--effects-color)',
                 transition: 'all 0.25s ease',
                 display: 'flex',
                 alignItems: 'center',
