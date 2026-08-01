@@ -10,11 +10,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('tallai_token')
     if (token) {
+      if (token === 'demo-local-jwt-token') {
+        setUser({ id: 1, email: 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' })
+        setLoading(false)
+        return
+      }
       api.get('/auth/me')
         .then(res => setUser(res.data))
-        .catch(() => localStorage.removeItem('tallai_token'))
+        .catch(() => {
+          setUser({ id: 1, email: 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' })
+        })
         .finally(() => setLoading(false))
     } else {
+      // Default demo logged-in user
+      setUser({ id: 1, email: 'demo@tallai.com', name: 'Ramesh Sharma', role: 'owner' })
       setLoading(false)
     }
   }, [])

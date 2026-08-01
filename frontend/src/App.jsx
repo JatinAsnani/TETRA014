@@ -25,52 +25,26 @@ export default function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
-  // Continuous Theme Swapper (Swaps Main Site & Chatbot Theme every 4 seconds)
+  // Stable Theme Initialization
   useEffect(() => {
-    let isSwapped = false;
-    
-    function updateSwappedColors() {
+    function updateThemeColors() {
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       
-      // Aqua Blue vs Sea Green Teal
-      const aquaColor = isLight ? '#0284C7' : '#06B6D4';
-      const aquaEffects = isLight ? 'rgba(2, 132, 199, 0.14)' : 'rgba(6, 182, 212, 0.15)';
-      
-      const seaColor = isLight ? '#0D9488' : '#14B8A6';
-      const seaEffects = isLight ? 'rgba(13, 148, 136, 0.14)' : 'rgba(20, 184, 166, 0.15)';
+      const primaryColor = isLight ? '#0284C7' : '#06B6D4';
+      const effectsColor = isLight ? 'rgba(2, 132, 199, 0.14)' : 'rgba(6, 182, 212, 0.15)';
+      const chatbotColor = isLight ? '#0D9488' : '#14B8A6';
 
-      const currentMainColor = isSwapped ? seaColor : aquaColor;
-      const currentMainEffects = isSwapped ? seaEffects : aquaEffects;
-      const currentChatbotColor = isSwapped ? aquaColor : seaColor;
-
-      document.documentElement.style.setProperty('--primary-color', currentMainColor);
-      document.documentElement.style.setProperty('--effects-color', currentMainEffects);
-      document.documentElement.style.setProperty('--chatbot-primary-color', currentChatbotColor);
-
-      window.dispatchEvent(new CustomEvent('themeSwap', { 
-        detail: { 
-          isSwapped,
-          mainColor: currentMainColor,
-          chatbotColor: isSwapped ? aquaColor : seaColor
-        } 
-      }));
+      document.documentElement.style.setProperty('--primary-color', primaryColor);
+      document.documentElement.style.setProperty('--effects-color', effectsColor);
+      document.documentElement.style.setProperty('--chatbot-primary-color', chatbotColor);
     }
 
-    // Run initial update
-    updateSwappedColors();
+    updateThemeColors();
 
-    const interval = setInterval(() => {
-      isSwapped = !isSwapped;
-      updateSwappedColors();
-    }, 12000);
-
-    const observer = new MutationObserver(() => updateSwappedColors());
+    const observer = new MutationObserver(() => updateThemeColors());
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-    return () => {
-      clearInterval(interval);
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
   return (
