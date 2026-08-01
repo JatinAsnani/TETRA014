@@ -131,16 +131,16 @@ export default function UploadPanel({ onInvoiceExtracted }) {
                 key={preset.scanned_invoice_id}
                 onClick={() => handleSelectPreset(preset)}
                 disabled={isPresetLoading || loading}
-                className="text-left p-3.5 bg-slate-900/60 hover:bg-slate-900 border border-slate-700/80 hover:border-indigo-500/50 rounded-lg transition-all group relative overflow-hidden"
+                className="text-left p-3.5 bg-slate-900 border border-slate-700 hover:border-indigo-500 hover:bg-slate-800 rounded-xl transition-all group relative shadow-md"
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-indigo-400">Sample #{index + 1}</span>
-                  <span className="text-[10px] text-slate-500 font-mono">₹{preset.total_amount.toLocaleString('en-IN')}</span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-indigo-400">Sample #{index + 1}</span>
+                  <span className="text-xs font-bold text-emerald-400 font-mono">₹{preset.total_amount.toLocaleString('en-IN')}</span>
                 </div>
-                <h4 className="text-white font-medium text-xs truncate group-hover:text-indigo-300">
+                <h4 className="text-white font-bold text-xs truncate group-hover:text-indigo-300">
                   {preset.scenario}
                 </h4>
-                <p className="text-[11px] text-slate-400 mt-1 truncate">
+                <p className="text-[11px] text-slate-300 mt-1 truncate">
                   {preset.vendor_name} ({preset.invoice_number})
                 </p>
               </button>

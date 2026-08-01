@@ -51,11 +51,11 @@ export default function InvoiceRiskScanner() {
           
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
                   TetraTHON 2026 — Track C
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
                   Classification Intelligence
                 </span>
               </div>
@@ -73,7 +73,7 @@ export default function InvoiceRiskScanner() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-700/80 gap-2">
+        <div className="flex flex-wrap items-center border-b border-slate-700/80 gap-2 pb-1">
           {[
             { id: 'upload', label: 'Upload & Reconcile', icon: '📄' },
             { id: 'exceptions', label: 'Exception Dashboard', icon: '🚨' },
@@ -85,14 +85,14 @@ export default function InvoiceRiskScanner() {
                 setActiveTab(tab.id)
                 setReconcileSuccessMsg(null)
               }}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-lg transition-all ${
                 activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
               }`}
             >
-              <span>{tab.icon}</span>
-              {tab.label}
+              <span className="text-sm">{tab.icon}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>

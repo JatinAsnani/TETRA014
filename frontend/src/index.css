@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ===== Ultra Clean 3-Color Monochromatic Palette System ===== */
 /* Color 1: Background Color (#0A0E17 Dark / #F8FAFC Light)   */
 /* Color 2: Primary Brand Color (#14B8A6 Deep Sea Green)       */
