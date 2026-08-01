@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
 import Invoices from './pages/Invoices'
 import InvoiceDetail from './pages/InvoiceDetail'
+import InvoiceRiskScanner from './pages/InvoiceRiskScanner'
 import Expenses from './pages/Expenses'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
           <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />
+          <Route path="/invoice-risk-scanner" element={<ProtectedRoute><InvoiceRiskScanner /></ProtectedRoute>} />
           <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
           <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
           <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
