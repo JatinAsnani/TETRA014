@@ -61,7 +61,7 @@ export default function Login() {
     setTimeout(() => {
       setIsLoading(false);
       navigate('/');
-    }, 2400);
+    }, 1600);
   }
 
   function handleQuickFill(role) {
