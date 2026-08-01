@@ -10,14 +10,21 @@ from routers import (
     auth_router, chat_router, invoice_router, expense_router,
     customer_router, vendor_router, dashboard_router,
     report_router, ledger_router, payment_router, stock_router,
-    purchase_router,
+    purchase_router, invoice_risk_router,
 )
 from features.reminder_scheduler import start_scheduler
 
 app = FastAPI(title="TallAI API", version="1.0.0")
 
 frontend_url = os.getenv("FRONTEND_URL")
-origins = ["http://localhost:5173"]
+origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
+]
 if frontend_url:
     for url in frontend_url.split(","):
         stripped = url.strip()
@@ -27,6 +34,7 @@ if frontend_url:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +52,7 @@ app.include_router(ledger_router.router, prefix="/ledger", tags=["Ledger"])
 app.include_router(payment_router.router, prefix="/payments", tags=["Payments"])
 app.include_router(stock_router.router, prefix="/stock", tags=["Stock"])
 app.include_router(purchase_router.router, prefix="/purchases", tags=["Purchases"])
+app.include_router(invoice_risk_router.router, prefix="/invoice-risk", tags=["Invoice Risk Scanner"])
 
 
 from seed_data import seed_database
