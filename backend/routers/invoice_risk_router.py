@@ -227,7 +227,15 @@ def _build_db_exceptions(user_id: int, db: Session) -> List[Dict[str, Any]]:
                 }
             })
 
-    return exceptions
+    seen_keys = set()
+    unique_exceptions = []
+    for exc in exceptions:
+        key = (exc.get("exception_type"), str(exc.get("invoice_number")).strip().lower(), str(exc.get("vendor_name")).strip().lower())
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_exceptions.append(exc)
+
+    return unique_exceptions
 
 
 @router.post("/upload")
@@ -239,27 +247,31 @@ async def upload_or_extract_invoice(
     db: Session = Depends(get_db),
 ):
     org_id = get_org_id(user, db)
-    sc_id = f"sc-{int(datetime.utcnow().timestamp() * 1000)}"
+    ts = int(datetime.utcnow().timestamp() * 1000)
 
-    extracted = None
+    extracted_items = []
     if file:
+        # Clear stale prior session scans when uploading a new file
+        _scanned_invoices_db[org_id] = []
         contents = await file.read()
         res = extract_invoice_from_file(contents, file.filename)
-        if isinstance(res, list) and len(res) > 0:
-            extracted = res[0]
+        if isinstance(res, list):
+            extracted_items = res
         elif isinstance(res, dict):
-            extracted = res
+            extracted_items = [res]
     else:
         try:
             body = await request.json()
-            if isinstance(body, dict):
-                extracted = body
+            if isinstance(body, list):
+                extracted_items = body
+            elif isinstance(body, dict):
+                extracted_items = [body]
         except Exception:
             pass
 
-    if not extracted or not isinstance(extracted, dict):
-        extracted = {
-            "invoice_number": f"INV-{int(datetime.utcnow().timestamp()) % 10000:04d}",
+    if not extracted_items:
+        extracted_items = [{
+            "invoice_number": f"INV-{ts % 10000:04d}",
             "invoice_date": date.today().isoformat(),
             "vendor_name": "Apex Supplies",
             "vendor_gstin": "24AAACA9876E1Z5",
@@ -269,15 +281,55 @@ async def upload_or_extract_invoice(
             "line_items": [
                 {"description": "Raw Material Batch #10", "quantity": 10, "rate": 1500.0, "amount": 15000.0}
             ]
-        }
+        }]
 
-    extracted["scanned_invoice_id"] = extracted.get("scanned_invoice_id") or sc_id
-    extracted["created_at"] = extracted.get("created_at") or datetime.utcnow().isoformat()
-
+    formatted_items = []
     scanned_store = _get_user_scanned(org_id)
-    scanned_store.append(extracted)
 
-    return extracted
+    for idx, item in enumerate(extracted_items):
+        sc_id = item.get("scanned_invoice_id") or f"sc-{ts}-{idx+1}"
+        formatted = {
+            "scanned_invoice_id": sc_id,
+            "invoice_number": item.get("invoice_number", f"INV-{ts % 10000 + idx:04d}"),
+            "invoice_date": item.get("invoice_date") or date.today().isoformat(),
+            "vendor_name": item.get("vendor_name") or "Unknown Vendor",
+            "vendor_gstin": item.get("vendor_gstin"),
+            "taxable_value": float(item.get("taxable_value", 0.0)),
+            "tax_amount": float(item.get("tax_amount", 0.0)),
+            "total_amount": float(item.get("total_amount", 0.0)),
+            "file_name": file.filename if file else item.get("file_name", "uploaded_invoice.pdf"),
+            "notes": item.get("notes") or "AI extracted invoice",
+            "line_items": item.get("line_items", []),
+            "status": "EXTRACTED",
+            "created_at": item.get("created_at") or datetime.utcnow().isoformat()
+        }
+        scanned_store = [x for x in scanned_store if x.get("scanned_invoice_id") != sc_id]
+        scanned_store.append(formatted)
+        formatted_items.append(formatted)
+
+    _scanned_invoices_db[org_id] = scanned_store
+
+    if len(formatted_items) == 1:
+        return formatted_items[0]
+
+    primary = formatted_items[0]
+    return {
+        "scanned_invoice_id": primary["scanned_invoice_id"],
+        "batch": True,
+        "total_extracted": len(formatted_items),
+        "items": formatted_items,
+        "invoice_number": primary["invoice_number"],
+        "invoice_date": primary["invoice_date"],
+        "vendor_name": primary["vendor_name"],
+        "vendor_gstin": primary["vendor_gstin"],
+        "taxable_value": primary["taxable_value"],
+        "tax_amount": primary["tax_amount"],
+        "total_amount": primary["total_amount"],
+        "file_name": file.filename if file else "uploaded_invoice.pdf",
+        "notes": f"Batch extracted {len(formatted_items)} transaction rows from {file.filename if file else 'document'}",
+        "status": "EXTRACTED",
+        "created_at": datetime.utcnow().isoformat()
+    }
 
 
 
