@@ -236,6 +236,37 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
           </div>
         )}
 
+        {/* Line Items & Products Table (for single invoice with line items) */}
+        {!isBatch && items[0]?.line_items && items[0].line_items.length > 0 && (
+          <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-3">
+            <h4 className="text-white font-semibold text-xs flex items-center gap-2">
+              <span>📦</span> Extracted Line Items & Products ({items[0].line_items.length} Products)
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-800 text-slate-300 font-semibold border-b border-slate-700">
+                  <tr>
+                    <th className="py-2.5 px-3">Product / Description</th>
+                    <th className="py-2.5 px-3 text-right">Quantity</th>
+                    <th className="py-2.5 px-3 text-right">Rate (₹)</th>
+                    <th className="py-2.5 px-3 text-right">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-white">
+                  {items[0].line_items.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-800/40">
+                      <td className="py-2 px-3 font-medium text-slate-200">{item.description || item.item_name || 'Product Item'}</td>
+                      <td className="py-2 px-3 text-right font-mono text-slate-300">{item.quantity || 1}</td>
+                      <td className="py-2 px-3 text-right font-mono text-slate-300">₹{Number(item.rate || item.unit_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 px-3 text-right font-mono text-emerald-400 font-semibold">₹{Number(item.amount || item.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-700/80">
           <button
             type="submit"
