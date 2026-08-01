@@ -27,6 +27,9 @@ export default function App() {
 
   // Stable Theme Initialization
   useEffect(() => {
+    const savedTheme = localStorage.getItem('app-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
     function updateThemeColors() {
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       

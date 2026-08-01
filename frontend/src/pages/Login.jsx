@@ -317,7 +317,6 @@ export default function Login() {
                   setEmail(e.target.value);
                   if (isError) {
                     setIsError(false);
-                    setCatVideo('/cat_login.mp4');
                     setBubbleText('Aaja login karle');
                   }
                 }}
@@ -355,7 +354,6 @@ export default function Login() {
                     setPassword(e.target.value);
                     if (isError) {
                       setIsError(false);
-                      setCatVideo('/cat_login.mp4');
                       setBubbleText('Aaja login karle');
                     }
                   }}
