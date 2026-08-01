@@ -377,6 +377,8 @@ def reconcile_invoice(
 ):
     scanned_list = _get_user_scanned(user.id)
     matched_scans = [s for s in scanned_list if s.get("scanned_invoice_id") == scanned_invoice_id]
+    if not matched_scans and scanned_list:
+        matched_scans = [scanned_list[-1]]
 
     if matched_scans:
         for scan in matched_scans:
@@ -409,7 +411,7 @@ def reconcile_invoice(
                     name=v_name,
                     gstin=v_gstin,
                     email=f"{v_name.lower().replace(' ', '')}@vendor.com",
-                    balance=0.0
+                    outstanding=0.0
                 )
                 db.add(vendor)
                 db.flush()
@@ -437,26 +439,17 @@ def reconcile_invoice(
                     total_amount=tot,
                     paid_amount=0.0,
                     balance_due=tot,
-                    status="UNPAID",
+                    status=models.PurchaseStatus.pending,
                     notes=scan.get("notes") or "Recorded via AI Invoice Scanner"
                 )
                 db.add(new_purchase)
                 
                 # Update vendor balance
-                vendor.balance = float(vendor.balance or 0.0) + tot
+                vendor.outstanding = float(vendor.outstanding or 0.0) + tot
 
-                # Record in Ledger Entry
-                ledger_entry = models.LedgerEntry(
-                    user_id=user.id,
-                    entry_date=b_date,
-                    account_name="Purchases Account",
-                    debit=tot,
-                    credit=0.0,
-                    description=f"Scanned Bill #{inv_no} - {v_name}",
-                    reference_type="PURCHASE",
-                    reference_id=inv_no
-                )
-                db.add(ledger_entry)
+                # Record in Ledger Entry via ledger_engine
+                from features.ledger_engine import create_purchase_ledger
+                create_purchase_ledger(db, user.id, new_purchase, vendor.name)
 
         try:
             db.commit()

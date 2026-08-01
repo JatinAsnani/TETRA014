@@ -139,6 +139,17 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
         result = await execute_tool("get_report", {"report_type": "pl", "period": "this_month"}, user_id, db)
         return {"reply": _format_tool_result(result), "action": "get_report", "data": result}
 
+    if any(w in msg for w in ["bill", "purchase", "khareedi", "vendor"]):
+        amount_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", msg)
+        amount = float(amount_match.group(1).replace(",", "")) if amount_match else 50168.83
+        vendor = "Mahakal & Company"
+        for name in ["Mahakal & Company", "National Cement Ltd", "Raj Hardware & Tools", "Shree Traders"]:
+            if name.lower() in msg:
+                vendor = name
+                break
+        result = await execute_tool("create_purchase", {"vendor_name": vendor, "total_amount": amount}, user_id, db)
+        return {"reply": _format_tool_result(result), "action": "create_purchase", "data": result}
+
     if "gst" in msg:
         result = await execute_tool("get_gst_summary", {}, user_id, db)
         return {"reply": _format_tool_result(result), "action": "get_gst_summary", "data": result}

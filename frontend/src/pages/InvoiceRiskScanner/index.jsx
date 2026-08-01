@@ -14,9 +14,15 @@ export default function InvoiceRiskScanner() {
   const [refreshCounter, setRefreshCounter] = useState(0)
   const [reconcileSuccessMsg, setReconcileSuccessMsg] = useState(null)
 
-  const handleInvoiceExtracted = (data) => {
+  const handleInvoiceExtracted = async (data) => {
     setExtractedData(data)
     setReconcileSuccessMsg(null)
+
+    // Auto-save bill to live DB & ledger immediately on upload
+    const targetItem = (data?.items && data.items.length > 0) ? data.items[0] : data
+    if (targetItem && targetItem.scanned_invoice_id) {
+      await handleConfirmFields(targetItem)
+    }
   }
 
   const handleConfirmFields = async (confirmedFields) => {
