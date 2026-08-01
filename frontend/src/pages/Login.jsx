@@ -48,9 +48,9 @@ export default function Login() {
       return;
     }
 
-    // Success flow: Reset to happy cat video
-    setCatVideo('/cat_login.mp4');
-    setBubbleText('Yay! Logging you in... 🚀');
+    // Success flow: Play happy cat video!
+    setCatVideo('/cat_happy.mp4');
+    setBubbleText('Yay! Login Successful! 🥳🎉');
     setIsLoading(true);
 
     try {
@@ -66,8 +66,8 @@ export default function Login() {
       setIsSuccess(true);
       setTimeout(() => {
         navigate('/');
-      }, 1000);
-    }, 1200);
+      }, 1800);
+    }, 1500);
   }
 
   function handleQuickFill(role) {
