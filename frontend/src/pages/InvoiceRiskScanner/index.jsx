@@ -14,34 +14,29 @@ export default function InvoiceRiskScanner() {
   const [refreshCounter, setRefreshCounter] = useState(0)
   const [reconcileSuccessMsg, setReconcileSuccessMsg] = useState(null)
 
-  const handleInvoiceExtracted = async (data) => {
+  const handleInvoiceExtracted = (data) => {
     setExtractedData(data)
     setReconcileSuccessMsg(null)
-
-    // Auto-save bill to live DB & ledger immediately on upload
-    const targetItem = (data?.items && data.items.length > 0) ? data.items[0] : data
-    if (targetItem && targetItem.scanned_invoice_id) {
-      await handleConfirmFields(targetItem)
-    }
   }
 
   const handleConfirmFields = async (confirmedFields) => {
     try {
-      await confirmInvoice(confirmedFields.scanned_invoice_id, confirmedFields)
-      const res = await reconcileInvoice(confirmedFields.scanned_invoice_id)
+      const targetId = confirmedFields.scanned_invoice_id || (confirmedFields.items && confirmedFields.items[0]?.scanned_invoice_id)
+      await confirmInvoice(targetId, confirmedFields)
+      const res = await reconcileInvoice(targetId)
       
       setExtractedData(null)
       setRefreshCounter(prev => prev + 1)
       
       if (res.exceptions_found > 0) {
-        setReconcileSuccessMsg(`Reconciliation finished: Found ${res.exceptions_found} exception flag(s). Switched to Exception Dashboard.`)
+        setReconcileSuccessMsg(`Reconciliation finished: Found ${res.exceptions_found} discrepancy flag(s). Switched to Exception Dashboard.`)
         setActiveTab('exceptions')
       } else {
         setReconcileSuccessMsg('Reconciliation finished: No discrepancies found! Invoice verified cleanly against ledger.')
         setActiveTab('exceptions')
       }
     } catch (err) {
-      console.error(err)
+      console.error('Confirmation & Reconciliation failed:', err)
     }
   }
 
