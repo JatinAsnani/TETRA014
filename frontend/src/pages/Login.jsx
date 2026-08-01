@@ -69,22 +69,36 @@ export default function Login() {
     setCatVideo('/cat_login.mp4');
     setBubbleText('Aaja login karle');
 
+    let targetEmail = 'demo@tallai.com';
+    let targetPass = 'demo123';
+
     if (role === 'owner') {
-      setEmail('sharma.owner@tallai.in');
-      setPassword('OwnerPass2026!');
+      targetEmail = 'sharma.owner@tallai.in';
+      targetPass = 'OwnerPass2026!';
     } else if (role === 'accountant') {
-      setEmail('accountant@sharmastore.com');
-      setPassword('TaxAudit#8819');
+      targetEmail = 'accountant@sharmastore.com';
+      targetPass = 'TaxAudit#8819';
     } else if (role === 'auditor') {
-      setEmail('auditor@gst.gov.in');
-      setPassword('GSTN-Verify990');
+      targetEmail = 'auditor@gst.gov.in';
+      targetPass = 'GSTN-Verify990';
     } else if (role === 'wrong-pass') {
       setEmail('admin@sharmastore.com');
       setPassword('wrong');
+      setCatVideo('/cat_wrong.mp4');
+      setBubbleText('Wrong Password! Try again 😿');
+      setIsError(true);
+      return;
     } else if (role === 'wrong-email') {
       setEmail('invalid-email-format');
       setPassword('Password123');
+      setCatVideo('/cat_wrong.mp4');
+      setBubbleText('Invalid Email Address! 😿');
+      setIsError(true);
+      return;
     }
+
+    setEmail(targetEmail);
+    setPassword(targetPass);
   }
 
   return (
