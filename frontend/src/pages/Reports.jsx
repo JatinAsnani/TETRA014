@@ -60,12 +60,21 @@ export default function Reports() {
         const res = await api.get(`/reports/gst-summary?month=${month}&year=${year}`)
         if (res.data) {
           const gst = res.data
+          const cgstVal = floatVal(gst.cgst_collected ?? gst.cgst ?? (floatVal(gst.total_gst_collected) / 2))
+          const sgstVal = floatVal(gst.sgst_collected ?? gst.sgst ?? (floatVal(gst.total_gst_collected) / 2))
+          const igstVal = floatVal(gst.igst_collected ?? gst.igst ?? 0)
+          const totalOutputVal = floatVal(gst.total_gst_collected ?? (cgstVal + sgstVal + igstVal))
+          const itcVal = floatVal(gst.total_gst_paid_on_purchases ?? gst.itc ?? 0)
+          const netPayableVal = floatVal(gst.net_gst_liability ?? (totalOutputVal - itcVal))
+
           setReportData(prev => ({
             ...prev,
-            cgst: floatVal(gst.cgst || gst.total_gst_collected / 2),
-            sgst: floatVal(gst.sgst || gst.total_gst_collected / 2),
-            igst: floatVal(gst.igst),
-            total_gst: floatVal(gst.total_gst_collected || gst.net_gst_liability)
+            cgst: cgstVal,
+            sgst: sgstVal,
+            igst: igstVal,
+            total_gst_output: totalOutputVal,
+            itc: itcVal,
+            net_payable: netPayableVal
           }))
         }
       } else if (active === 'Balance Sheet') {
@@ -118,7 +127,7 @@ export default function Reports() {
   }
 
   const handleExplainAI = () => {
-    setAiReport(`🤖 FRIDAY AI Financial Analysis for ${active} Report (${fromDate} to ${toDate}):\n\n• Total Recorded Sales: ₹${reportData.sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Total Purchases/COGS: ₹${reportData.purchases.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Total Operating Expenses: ₹${reportData.expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Net Profit Statement: ₹${reportData.net_profit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Financial Statement Audit: All double-entry accounts reconciled cleanly.`)
+    setAiReport(`🤖 FRIDAY AI Financial Analysis for ${active} Report (${fromDate} to ${toDate}):\n\n• Total Recorded Sales: ₹${reportData.sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Total Purchases/COGS: ₹${reportData.purchases.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Total Operational Expenses: ₹${reportData.expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Net Profit Statement: ₹${reportData.net_profit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Financial Statement Audit: All double-entry accounts reconciled cleanly.`)
     toast.success('AI Analysis generated!')
   }
 
@@ -142,57 +151,39 @@ export default function Reports() {
         ))}
       </div>
 
-      {/* Filters & Actions Bar */}
-      <div className="filters flex flex-wrap items-center justify-between gap-4 bg-slate-800/60 p-4 rounded-xl border border-slate-700/80 mb-4">
-        <div className="flex items-center gap-2 text-xs text-slate-300">
-          <span>From:</span>
-          <input 
-            type="date"
-            className="bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-xs text-white"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
-          <span>To:</span>
-          <input 
-            type="date"
-            className="bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-xs text-white"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={handleExportExcel} className="btn secondary small flex items-center gap-1">
-            <span>⬇</span> CSV / Excel
-          </button>
-          <button onClick={handlePrint} className="btn secondary small flex items-center gap-1">
-            <span>🖨</span> Print
-          </button>
-          <button onClick={handleExplainAI} className="btn small bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1 shadow-md">
-            <span>🤖</span> Explain with AI
-          </button>
-        </div>
-      </div>
-
-      {/* AI Explanation Box */}
-      {aiReport && (
-        <div className="bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 text-xs p-4 rounded-xl space-y-2 mb-4 relative shadow-xl">
-          <button onClick={() => setAiReport(null)} className="absolute right-3 top-3 text-indigo-400 hover:text-white font-bold">✕</button>
-          <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed">{aiReport}</pre>
-        </div>
-      )}
-
-      {/* Dynamic Report Table Card */}
-      <div className="card card-pad">
-        <div className="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
-          <h3 className="text-white font-bold text-base">{active} Financial Statement</h3>
-          <span className="text-xs text-indigo-300 font-mono">Period: {fromDate} to {toDate}</span>
-        </div>
-
+      {/* Main Report Container */}
+      <div className="card card-pad relative overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-slate-400 text-sm">Loading financial report...</div>
+          <div className="py-12 text-center text-slate-400 text-xs">Loading report dataset...</div>
         ) : (
           <>
+            {/* Header Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-slate-700 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-white">{active} Statement</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Report Period: {fromDate} to {toDate}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={handleExplainAI} className="btn small bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1">
+                  <span>🤖</span> AI Audit Analysis
+                </button>
+                <button onClick={handleExportExcel} className="btn small border border-slate-700 hover:bg-slate-800 text-slate-300">
+                  📥 Export CSV
+                </button>
+                <button onClick={handlePrint} className="btn small border border-slate-700 hover:bg-slate-800 text-slate-300">
+                  🖨️ Print Report
+                </button>
+              </div>
+            </div>
+
+            {/* AI Callout */}
+            {aiReport && (
+              <div className="bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 text-xs p-4 rounded-xl space-y-2 mb-6 relative shadow-xl">
+                <button onClick={() => setAiReport(null)} className="absolute right-3 top-3 text-indigo-400 hover:text-white font-bold">✕</button>
+                <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed">{aiReport}</pre>
+              </div>
+            )}
+
             {/* P&L / Sales Tab */}
             {(active === 'P&L' || active === 'Sales') && (
               <table>
@@ -229,27 +220,27 @@ export default function Reports() {
                 <tbody>
                   <tr>
                     <td className="font-bold text-white">CGST (Central Tax)</td>
-                    <td className="num mono text-emerald-400">₹{reportData.cgst.toFixed(2)}</td>
-                    <td className="num mono text-slate-400">₹0.00</td>
-                    <td className="num mono text-rose-400 font-bold">₹{reportData.cgst.toFixed(2)}</td>
+                    <td className="num mono text-emerald-400">₹{(reportData.cgst || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.itc ? reportData.itc / 2 : 0).toFixed(2)}</td>
+                    <td className="num mono text-rose-400 font-bold">₹{Math.max(0, (reportData.cgst || 0) - (reportData.itc ? reportData.itc / 2 : 0)).toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="font-bold text-white">SGST (State Tax)</td>
-                    <td className="num mono text-emerald-400">₹{reportData.sgst.toFixed(2)}</td>
-                    <td className="num mono text-slate-400">₹0.00</td>
-                    <td className="num mono text-rose-400 font-bold">₹{reportData.sgst.toFixed(2)}</td>
+                    <td className="num mono text-emerald-400">₹{(reportData.sgst || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.itc ? reportData.itc / 2 : 0).toFixed(2)}</td>
+                    <td className="num mono text-rose-400 font-bold">₹{Math.max(0, (reportData.sgst || 0) - (reportData.itc ? reportData.itc / 2 : 0)).toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="font-bold text-white">IGST (Integrated Tax)</td>
-                    <td className="num mono text-slate-400">₹{reportData.igst.toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.igst || 0).toFixed(2)}</td>
                     <td className="num mono text-slate-400">₹0.00</td>
-                    <td className="num mono text-slate-400">₹{reportData.igst.toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.igst || 0).toFixed(2)}</td>
                   </tr>
                   <tr className="bg-slate-900 border-t-2 border-slate-700 font-black text-sm text-white">
                     <td>TOTAL GST COMPLIANCE</td>
-                    <td className="num mono text-emerald-400">₹{reportData.total_gst.toFixed(2)}</td>
-                    <td className="num mono text-slate-400">₹0.00</td>
-                    <td className="num mono text-rose-400">₹{reportData.total_gst.toFixed(2)}</td>
+                    <td className="num mono text-emerald-400">₹{(reportData.total_gst_output || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.itc || 0).toFixed(2)}</td>
+                    <td className="num mono text-rose-400">₹{(reportData.net_payable || 0).toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
