@@ -47,6 +47,7 @@ Rules:
 3. If a field is missing or not present in the document, use null for strings and 0.0 for numeric values. Do NOT invent fake data.
 4. Remove currency symbols like ₹, Rs, etc., return numbers as plain floats.
 5. Output ONLY valid JSON array. Do not include extra conversational text or explanations.
+6. CRITICAL FOR LINE ITEMS: Extract ONLY genuine purchased items listed BEFORE the 'Total' line. Stop line item extraction as soon as you hit 'Total' or 'Subtotal'. NEVER include payment tender lines after 'Total' (such as 'Cash', 'Change', 'Card', 'Bank Card', 'Approval Code') in line_items.
 """
 
 PREFERRED_MODELS = [
@@ -332,15 +333,22 @@ def _extract_via_ocr_space(file_bytes: bytes, mime_type: str, filename: str) -> 
 
                     line_items = []
                     for line in lines:
-                        m = re.search(r"^([A-Za-z\s]{3,20})\s+([\d,]+\.?\d*)$", line)
-                        if m and not any(k in m.group(1).lower() for k in ["total", "price", "tax", "subtotal", "sub-total", "paid", "amount", "cash", "change", "tender", "balance", "card", "approval", "auth"]):
-                            amt = float(m.group(2).replace(",", ""))
-                            line_items.append({
-                                "description": m.group(1).strip(),
-                                "quantity": 1,
-                                "rate": amt,
-                                "amount": amt
-                            })
+                        line_lower = line.strip().lower()
+                        # DONT GO BEYOND TOTAL! Break immediately when hitting Total, Subtotal, Cash, Change, Card, etc.
+                        if any(k in line_lower for k in ["total", "subtotal", "sub-total", "cash", "change", "tender", "balance", "bank card", "approval", "thank you"]):
+                            break
+
+                        m = re.search(r"^([A-Za-z\s]{2,30})\s+([\d,]+\.?\d*)$", line)
+                        if m:
+                            item_desc = m.group(1).strip()
+                            if not any(k in item_desc.lower() for k in ["description", "price", "particulars", "rate", "qty", "amount"]):
+                                amt = float(m.group(2).replace(",", ""))
+                                line_items.append({
+                                    "description": item_desc,
+                                    "quantity": 1,
+                                    "rate": amt,
+                                    "amount": amt
+                                })
 
                     return [_format_single_invoice_dict({
                         "invoice_number": inv_no_match.group(1) if inv_no_match else f"REC-{abs(hash(filename)) % 9000 + 1000}",
