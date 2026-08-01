@@ -1,94 +1,54 @@
-# TallAI
+# TallAI — AI Accounting + Invoice Risk Scanner (React/JSX)
 
-TallAI is an **AI-powered accounting application** designed for small businesses in India, offering intelligent double-entry bookkeeping, GST calculation, stock tracking, and natural language command processing.
+This is the same TallAI dashboard you had as one big HTML file, split into a
+proper multi-page React app. Every sidebar section is now its own page/route.
 
----
+## Structure
 
-## 🚀 Live Demo
-Visit the live application at: **[https://tall-ai.vercel.app](https://tall-ai.vercel.app)**
-* **Demo Login**: `demo@tallai.com`
-* **Password**: `demo123`
-
----
-
-## ✨ Key Features
-* **AI Chat**: Interactive financial assistant that accepts conversational Hinglish and English commands to check outstandings, record payments, file expenses, and explain reports.
-* **Invoices**: Create, edit, and print beautiful invoices with automated GST calculations and PDF download capability.
-* **GST & ITC**: Automated GSTR-1 and GSTR-3B filings summary, Input Tax Credit (ITC) calculations, and upcoming tax deadline countdown.
-* **Ledger**: Complete automated double-entry ledger bookkeeping mapping invoices, expenses, and payments.
-* **Payments**: Record payments from customers and track real-time outstanding balances.
-* **Stock & Inventory**: Keep track of item stocks, inventory movements, and minimum stock alerts.
-
----
-
-## 🛠️ Tech Stack
-* **Backend**: FastAPI (Python), SQLAlchemy, SQLite (production default), MySQL (supported)
-* **Frontend**: React (Vite), TailwindCSS, Chart.js, Axios
-* **AI Engine**: Google Gemini API (`gemini-2.5-flash`) for function calling and interactive reports explanation
-
----
-
-## 📋 Environment Variables Needed
-
-### Backend (`backend/.env`)
-Create a `.env` file in the `backend/` directory with the following variables:
-```env
-DATABASE_URL=sqlite:///./tallai.db
-GEMINI_API_KEY=your_gemini_api_key_here
-SECRET_KEY=your_secret_key_here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-FRONTEND_URL=http://localhost:5173
+```
+src/
+  main.jsx              entry point (mounts <App/> inside a router)
+  App.jsx                shell layout (sidebar + routes)
+  index.css               all the original styling (unchanged classnames)
+  components/
+    Sidebar.jsx            left nav, highlights the active route
+    Topbar.jsx              reusable page header ("Sharma General Store | Logout")
+    SalesChart.jsx           the Sales vs Expenses SVG bar chart
+  pages/
+    Dashboard.jsx            /
+    AIChat.jsx                /chat
+    Invoices.jsx               /invoices
+    ScanExtract.jsx             /scan
+    Reconciliation.jsx           /recon
+    AuditTrail.jsx                 /audit
+    Expenses.jsx                    /expenses
+    Customers.jsx                    /customers
+    Vendors.jsx                       /vendors
+    Payments.jsx                       /payments
+    Ledger.jsx                          /ledger
+    Stock.jsx                            /stock
+    Reports.jsx                           /reports
+    GST.jsx                                /gst
+    Settings.jsx                            /settings
 ```
 
-### Frontend (`frontend/.env`)
-Create a `.env` file in the `frontend/` directory:
-```env
-VITE_API_BASE_URL=http://localhost:8000
+## Run it
+
+```bash
+npm install
+npm run dev
 ```
 
----
+Then open the local URL Vite prints (usually http://localhost:5173).
 
-## ⚙️ Local Setup Instructions
+## Notes
 
-### Prerequisites
-* Node.js (v18+)
-* Python (v3.11+)
-
-### 1. Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Initialize and seed the local database:
-   ```bash
-   python seed_data.py
-   ```
-4. Start the FastAPI development server:
-   ```bash
-   python -m uvicorn main:app --reload --port 8000
-   ```
-
-### 2. Frontend Setup
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install node packages:
-   ```bash
-   npm install
-   ```
-3. Start the Vite React development server:
-   ```bash
-   npm run dev
-   ```
-
----
-
-## 💻 Running the Application (Windows Shortcut)
-You can launch both the frontend and backend servers simultaneously by double-clicking the `start.bat` file in the project root directory.
-* Open your browser at: **http://localhost:5173**
+- Navigation uses `react-router-dom` instead of the old `showView()` JS
+  function — clicking a sidebar item actually changes the URL now.
+- All the CSS classnames from the original file are untouched, so the look
+  is identical; `index.css` is imported once in `main.jsx`.
+- Data (invoices, customers, etc.) is hardcoded as arrays at the top of each
+  page file — swap these for real API calls whenever you're ready.
+- `Settings.jsx` and `AIChat.jsx` are wired up with `useState` so the fields
+  and chat input are actually interactive (the rest are static mockups, same
+  as the original).

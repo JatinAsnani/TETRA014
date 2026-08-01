@@ -1,0 +1,284 @@
+/* Login.css - Exact Website Theme Matching Layout */
+
+.login-wrapper {
+  min-height: 100vh;
+  background: var(--page);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background radial glow effect */
+.login-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--blue-soft) 0%, rgba(11, 15, 25, 0) 70%);
+  pointer-events: none;
+}
+
+/* Enlarged Card container */
+.card {
+  position: relative;
+  overflow: hidden;
+  width: min(860px, calc(100vw - 32px));
+  height: 520px;
+  border-radius: 24px;
+  background: var(--bg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 4px 20px rgba(56, 189, 248, 0.18);
+  border: 1px solid var(--border);
+  z-index: 2;
+}
+
+/* Sliding background overlay panel */
+.card-bg {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 50%;
+  background: linear-gradient(135deg, #0284c7, var(--blue));
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1), translate 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-bg.signin {
+  translate: 100% 0;
+}
+
+/* Hero and Form panels */
+.hero,
+.form {
+  position: absolute;
+  width: 50%;
+  height: 100%;
+  transition: translate 0.65s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+  box-sizing: border-box;
+}
+
+/* Hero panel styles */
+.hero {
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 50%;
+  color: var(--text);
+  padding: 0 48px;
+  text-align: center;
+}
+
+.hero h2 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 28px;
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.hero p {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 320px;
+}
+
+.hero button {
+  border: 2px solid #ffffff;
+  background: transparent;
+  color: #ffffff;
+  padding: 12px 36px;
+  border-radius: 32px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.hero button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.04);
+}
+
+.hero.signup {
+  left: 0;
+  translate: -100% 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero.signup.active {
+  translate: 0 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hero.signin {
+  left: 50%;
+  translate: 100% 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero.signin.active {
+  translate: 0 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Form panel styles */
+.form {
+  background: inherit;
+  z-index: 1;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 44px 48px;
+}
+
+.form h2 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.form p {
+  color: var(--text-soft);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+.form form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.form input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--sidebar-hi);
+  padding: 13px 16px;
+  color: var(--text);
+  font-size: 13.5px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+
+.form a {
+  color: var(--blue);
+  font-size: 12.5px;
+  align-self: flex-end;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.15s ease;
+}
+
+.form a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.form button {
+  border: 0;
+  padding: 13px 0;
+  border-radius: 32px;
+  color: #0f172a;
+  font-weight: 800;
+  width: 180px;
+  background: linear-gradient(135deg, var(--blue), #0284c7);
+  cursor: pointer;
+  font-size: 13.5px;
+  margin-top: 6px;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
+}
+
+.form.signup {
+  left: 50%;
+  translate: 100% 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form.signup.active {
+  translate: 0 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.form.signin {
+  left: 0;
+  translate: -100% 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form.signin.active {
+  translate: 0 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* SSO Social Buttons */
+.sso {
+  display: flex;
+  gap: 14px;
+}
+
+.sso-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--sidebar-hi);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.sso-btn:hover {
+  background: #1e293b;
+  border-color: var(--blue);
+  color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+}
