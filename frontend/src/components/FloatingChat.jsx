@@ -206,14 +206,7 @@ export default function FloatingChat() {
 
         aiReply = `Haanji! Maine '${name}' ko new Customer me add kar diya hai aur unka ₹${amount} ka Sales Bill & Paid Payment entry record kar di hai! Aap ab Customers page par jaakar check kar sakte hain.`;
 
-        try {
-          const newCust = { id: Date.now(), name, phone: '9876543210', email: `${name.toLowerCase()}@gmail.com`, city: 'Ahmedabad', state: 'Gujarat', credit_limit: '100000', outstanding: 0 };
-          const stored = JSON.parse(localStorage.getItem('friday_local_customers') || '[]');
-          if (!stored.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-            stored.unshift(newCust);
-            localStorage.setItem('friday_local_customers', JSON.stringify(stored));
-          }
-        } catch (e) {}
+
       } else if (lower.includes('name') || lower.includes('who are you') || lower.includes('naam') || lower.includes('kon ho')) {
         aiReply = `Mera naam FRIDAy hai! Main aapka AI Financial Assistant & Risk Auditor hoon.`;
       } else if (lower.includes('hindi') || lower.includes('hinglish') || lower.includes('bhasha') || lower.includes('language')) {

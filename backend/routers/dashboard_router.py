@@ -20,80 +20,54 @@ def dashboard_stats(
 ):
     from deps import get_org_id
     org_id = get_org_id(user, db)
-    today = date.today()
-    month_start = today.replace(day=1)
-    last_month_start = (month_start - timedelta(days=1)).replace(day=1)
-    last_month_end = month_start - timedelta(days=1)
 
-    def month_sum(model, amount_field, date_field, start, end):
-        return float(
-            db.query(func.coalesce(func.sum(amount_field), 0))
-            .filter(
-                getattr(model, "user_id") == org_id,
-                date_field >= start,
-                date_field <= end,
-            )
-            .scalar() or 0
+    # Calculate Total Sales across Invoices
+    total_sales = float(
+        db.query(func.coalesce(func.sum(models.Invoice.total_amount), 0))
+        .filter(models.Invoice.is_deleted == False)
+        .scalar() or 0
+    )
+
+    # Calculate Total Expenses
+    total_expenses = float(
+        db.query(func.coalesce(func.sum(models.Expense.amount), 0))
+        .scalar() or 0
+    )
+
+    # Calculate Total Receivables (Customer Outstanding or Unpaid Invoice Balances)
+    receivable = float(
+        db.query(func.coalesce(func.sum(models.Customer.outstanding), 0)).scalar() or 0
+    )
+    if receivable == 0:
+        receivable = float(
+            db.query(func.coalesce(func.sum(models.Invoice.balance_due), 0))
+            .filter(models.Invoice.is_deleted == False).scalar() or 0
         )
 
-    sales_this = month_sum(models.Invoice, models.Invoice.total_amount, models.Invoice.invoice_date, month_start, today)
-    sales_last = month_sum(models.Invoice, models.Invoice.total_amount, models.Invoice.invoice_date, last_month_start, last_month_end)
-    purchases_this = month_sum(models.PurchaseInvoice, models.PurchaseInvoice.total_amount, models.PurchaseInvoice.bill_date, month_start, today)
-    expenses_this = month_sum(models.Expense, models.Expense.amount, models.Expense.expense_date, month_start, today)
-
-    receivable = float(
-        db.query(func.coalesce(func.sum(models.Customer.outstanding), 0))
-        .filter(models.Customer.user_id == org_id).scalar() or 0
-    )
-    payable = float(
-        db.query(func.coalesce(func.sum(models.Vendor.outstanding), 0))
-        .filter(models.Vendor.user_id == org_id).scalar() or 0
+    # Calculate Total Purchases
+    total_purchases = float(
+        db.query(func.coalesce(func.sum(models.PurchaseInvoice.total_amount), 0)).scalar() or 0
     )
 
-    pl = get_pl_report(db, org_id, month_start, today)
-    gst = get_gst_summary(db, org_id, today.month, today.year)
-    deadlines = get_next_deadlines()
-
-    invoice_today = db.query(models.Invoice).filter(
-        models.Invoice.user_id == org_id,
-        models.Invoice.invoice_date == today,
-        models.Invoice.is_deleted == False,
-    ).count()
-
-    low_stock = db.query(models.StockItem).filter(
-        models.StockItem.user_id == org_id,
-        models.StockItem.current_stock < models.StockItem.min_stock,
-    ).count()
+    net_profit = total_sales - total_expenses - (total_purchases * 0.7)
 
     overdue = db.query(models.Invoice).filter(
-        models.Invoice.user_id == org_id,
         models.Invoice.is_deleted == False,
-        models.Invoice.due_date < today,
-        models.Invoice.balance_due > 0,
+        models.Invoice.status == models.InvoiceStatus.overdue
     ).count()
 
-    sales_change = round(((sales_this - sales_last) / sales_last * 100) if sales_last > 0 else 0, 1)
-
     return {
-        "sales": round(sales_this, 2),
-        "expenses": round(expenses_this, 2),
-        "receivable": round(receivable, 2),
-        "net_profit": pl["net_profit"],
+        "sales": total_sales,
+        "total_sales": total_sales,
+        "expenses": total_expenses,
+        "total_expenses": total_expenses,
+        "receivable": receivable,
+        "total_outstanding": receivable,
+        "net_profit": net_profit,
         "overdue_count": overdue,
-        "total_sales_this_month": round(sales_this, 2),
-        "total_purchases_this_month": round(purchases_this, 2),
-        "total_expenses_this_month": round(expenses_this, 2),
-        "outstanding_receivable": round(receivable, 2),
-        "outstanding_payable": round(payable, 2),
-        "net_profit_this_month": pl["net_profit"],
-        "invoice_count_today": invoice_today,
-        "gst_due_days": deadlines["gstr3b_days_left"],
-        "gst_liability": gst["net_gst_liability"],
-        "low_stock_count": low_stock,
-        "overdue_invoices_count": overdue,
-        "sales_change_pct": sales_change,
-        "expenses_change_pct": 0,
+        "purchases": total_purchases
     }
+
 
 
 @router.get("/recent")

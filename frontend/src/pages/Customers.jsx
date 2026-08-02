@@ -27,17 +27,13 @@ export default function Customers() {
 
   const fetchCustomers = async () => {
     setLoading(true)
-    const localData = JSON.parse(localStorage.getItem('friday_local_customers') || '[]')
     try {
       const params = search ? `?search=${encodeURIComponent(search)}` : ''
       const res = await api.get(`/customers${params}`)
-      const apiData = Array.isArray(res.data) ? res.data : []
-      // Deduplicate by name or ID
-      const combined = [...localData, ...apiData.filter(a => !localData.some(l => l.name?.toLowerCase() === a.name?.toLowerCase()))]
-      setCustomers(combined)
+      setCustomers(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
       console.warn('Failed to fetch customers from backend:', err)
-      setCustomers(localData)
+      setCustomers([])
     } finally {
       setLoading(false)
     }
