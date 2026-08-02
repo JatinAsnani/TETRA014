@@ -1,92 +1,152 @@
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import PageWrapper from '../components/layout/PageWrapper'
-import StatCard from '../components/ui/StatCard'
-import Badge from '../components/ui/Badge'
-import LoadingSkeleton from '../components/ui/LoadingSkeleton'
-import { useDashboard } from '../hooks/useDashboard'
-import { formatCurrency } from '../utils/formatCurrency'
-import { formatDate } from '../utils/formatDate'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-const COLORS = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#8b5cf6', '#06b6d4']
+import Topbar from '../components/Topbar.jsx'
+import SalesChart from '../components/SalesChart.jsx'
+import api from '../api/axios'
 
 export default function Dashboard() {
-  const { stats, recent, chart, expenses, loading } = useDashboard()
+  const [metrics, setMetrics] = useState({
+    sales: 0,
+    expenses: 0,
+    receivable: 0,
+    net_profit: 0,
+    overdue_count: 0
+  })
+  const [recentInvoices, setRecentInvoices] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  if (loading) return <PageWrapper title="Dashboard"><LoadingSkeleton rows={8} /></PageWrapper>
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    setLoading(true)
+    try {
+      const [sumRes, invRes] = await Promise.all([
+        api.get('/dashboard/summary'),
+        api.get('/invoices?limit=5')
+      ])
+
+      if (sumRes.data) {
+        setMetrics({
+          sales: parseFloat(sumRes.data.sales || sumRes.data.total_sales || 0),
+          expenses: parseFloat(sumRes.data.expenses || sumRes.data.total_expenses || 0),
+          receivable: parseFloat(sumRes.data.receivable || sumRes.data.total_outstanding || 0),
+          net_profit: parseFloat(sumRes.data.net_profit || 0),
+          overdue_count: parseInt(sumRes.data.overdue_count || 0, 10)
+        })
+      }
+
+      const invs = Array.isArray(invRes.data) ? invRes.data : (invRes.data?.items || [])
+      setRecentInvoices(invs)
+    } catch (err) {
+      console.warn('Backend dashboard offline, initializing 0 clean state:', err)
+      setMetrics({ sales: 0, expenses: 0, receivable: 0, net_profit: 0, overdue_count: 0 })
+      setRecentInvoices([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <PageWrapper title="Dashboard">
-      {stats?.gst_due_days <= 7 && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
-          ⚠️ GST filing due in {stats.gst_due_days} days. Liability: {formatCurrency(stats.gst_liability)}
-        </div>
-      )}
-      {stats?.overdue_invoices_count > 0 && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
-          {stats.overdue_invoices_count} overdue invoices need attention. <Link to="/invoices" className="underline font-medium">View</Link>
-        </div>
-      )}
-      {stats?.low_stock_count > 0 && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
-          {stats.low_stock_count} items below minimum stock. <Link to="/stock" className="underline font-medium">Check stock</Link>
+    <section className="view" id="view-dashboard">
+      <Topbar title="Dashboard" />
+
+      {metrics.overdue_count > 0 && (
+        <div className="banner">
+          {metrics.overdue_count} overdue invoice(s) need attention. <Link to="/invoices">View Invoices →</Link>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Sales This Month" value={formatCurrency(stats?.total_sales_this_month)} change={stats?.sales_change_pct} color="blue" icon="📈" />
-        <StatCard title="Expenses" value={formatCurrency(stats?.total_expenses_this_month)} color="amber" icon="💸" />
-        <StatCard title="Receivable" value={formatCurrency(stats?.outstanding_receivable)} color="green" icon="💰" />
-        <StatCard title="Net Profit" value={formatCurrency(stats?.net_profit_this_month)} color="blue" icon="📊" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 uppercase mb-4">Sales vs Expenses (6 months)</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={chart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={v => formatCurrency(v)} />
-              <Legend />
-              <Bar dataKey="sales" fill="#2563eb" name="Sales" />
-              <Bar dataKey="expenses" fill="#d97706" name="Expenses" />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* KPI Cards */}
+      <div className="grid cols-4 gap-4 mb-6">
+        <div className="card kpi border border-slate-700/80">
+          <div className="icbox bg-sky-500/10 text-sky-400">📈</div>
+          <div className="label">Sales This Month</div>
+          <div className="value font-mono">₹{metrics.sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-medium text-gray-500 uppercase mb-4">Expense Breakdown</h3>
-          {expenses?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={expenses} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={80} label>
-                  {expenses.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip formatter={v => formatCurrency(v)} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : <p className="text-gray-400 text-sm text-center py-16">No expenses this month</p>}
+
+        <div className="card kpi border border-slate-700/80">
+          <div className="icbox bg-emerald-500/10 text-emerald-400">🌱</div>
+          <div className="label">Expenses</div>
+          <div className="value font-mono">₹{metrics.expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+        </div>
+
+        <div className="card kpi border border-slate-700/80">
+          <div className="icbox bg-amber-500/10 text-amber-400">🏦</div>
+          <div className="label">Receivable</div>
+          <div className="value font-mono">₹{metrics.receivable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+        </div>
+
+        <div className="card kpi border border-slate-700/80">
+          <div className="icbox bg-indigo-500/10 text-indigo-400">📊</div>
+          <div className="label">Net Profit</div>
+          <div className="value font-mono">₹{metrics.net_profit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-medium text-gray-500 uppercase mb-4">Recent Invoices</h3>
-        <div className="divide-y divide-gray-100">
-          {recent?.invoices?.map(inv => (
-            <Link key={inv.id} to={`/invoices/${inv.id}`} className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded">
-              <div>
-                <p className="font-medium text-sm">{inv.invoice_number}</p>
-                <p className="text-xs text-gray-500">{inv.customer?.name} · {formatDate(inv.invoice_date)}</p>
+      {/* Sales vs Expenses Chart */}
+      <div className="grid cols-2 gap-6 mb-6">
+        <div className="card card-pad border border-slate-700/80">
+          <div className="section-title border-b border-slate-700 pb-2 mb-3">Sales vs Expenses Trend</div>
+          <div className="chart-wrap">
+            <SalesChart />
+            <div className="legend mt-2">
+              <span><i style={{ background: 'var(--amber)' }}></i> Sales</span>
+              <span><i style={{ background: 'var(--amber-soft)', border: '1px solid var(--amber)' }}></i> Expenses</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card card-pad border border-slate-700/80">
+          <div className="section-title border-b border-slate-700 pb-2 mb-3">Expense Breakdown</div>
+          {metrics.expenses === 0 ? (
+            <div className="empty p-8 text-center text-slate-400 text-sm">No expenses recorded this month</div>
+          ) : (
+            <div className="p-4 text-xs text-slate-300">Total Expenses: ₹{metrics.expenses.toFixed(2)}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Invoices */}
+      <div className="card card-pad border border-slate-700/80 mb-6">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
+          <div className="section-title">Recent Invoices</div>
+          <Link to="/invoices" className="text-xs text-indigo-400 font-bold hover:underline">View All →</Link>
+        </div>
+
+        {recentInvoices.length === 0 ? (
+          <div className="empty p-6 text-center text-slate-400 text-sm">
+            No invoices created yet. Click <Link to="/invoices" className="text-indigo-400 underline font-bold">+ New Invoice</Link> to get started.
+          </div>
+        ) : (
+          <div className="ilist space-y-2">
+            {recentInvoices.map((inv) => (
+              <div className="irow flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800" key={inv.id || inv.invoice_number}>
+                <div>
+                  <div className="id font-mono font-bold text-white text-xs">{inv.invoice_number}</div>
+                  <div className="meta text-[11px] text-slate-400">{inv.customer_name || 'Customer'} · {inv.invoice_date}</div>
+                </div>
+                <div className="text-right">
+                  <div className="amt mono font-bold text-xs text-white">₹{parseFloat(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <span className={`badge uppercase text-[10px] font-bold ${(inv.status || 'draft').toLowerCase()}`}>{inv.status || 'Draft'}</span>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-mono text-sm">{formatCurrency(inv.total_amount)}</p>
-                <Badge status={inv.status} />
-              </div>
-            </Link>
-          ))}
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Risk Snapshot */}
+      <div className="card card-pad border border-slate-700/80">
+        <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
+          <div className="section-title">Invoice Risk &amp; Audit Snapshot</div>
+          <Link to="/invoice-risk-scanner" className="btn small secondary">Open Risk Scanner →</Link>
+        </div>
+        <div className="p-4 text-xs text-slate-400">
+          Ready for document upload and audit verification.
         </div>
       </div>
-    </PageWrapper>
+    </section>
   )
 }

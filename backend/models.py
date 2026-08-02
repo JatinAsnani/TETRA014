@@ -56,7 +56,11 @@ class User(Base):
     phone = Column(String(20))
     financial_year = Column(String(10), default="2024-25")
     currency = Column(String(5), default="INR")
+    role = Column(String(50), default="admin")
+    parent_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    org_pass_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
 
     customers = relationship("Customer", back_populates="user")
     vendors = relationship("Vendor", back_populates="user")
@@ -305,3 +309,61 @@ class Notification(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="notifications")
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    org_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_name = Column(String(100))
+    user_email = Column(String(150))
+    action_type = Column(String(50), nullable=False)
+    entity_type = Column(String(50))
+    entity_id = Column(Integer, nullable=True)
+    description = Column(Text, nullable=False)
+    amount = Column(Numeric(12, 2), default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ScannedInvoice(Base):
+    __tablename__ = "scanned_invoices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    scanned_invoice_id = Column(String(100), unique=True, index=True)
+    invoice_number = Column(String(100))
+    invoice_date = Column(String(50))
+    vendor_name = Column(String(200))
+    vendor_gstin = Column(String(50))
+    taxable_value = Column(Numeric(14, 2), default=0)
+    tax_amount = Column(Numeric(14, 2), default=0)
+    total_amount = Column(Numeric(14, 2), default=0)
+    file_name = Column(String(255))
+    notes = Column(Text)
+    line_items = Column(Text)
+    status = Column(String(50), default="SCANNED")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AuditException(Base):
+    __tablename__ = "audit_exceptions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    exception_id = Column(String(100), unique=True, index=True)
+    scanned_invoice_id = Column(String(100))
+    invoice_number = Column(String(100))
+    vendor_name = Column(String(200))
+    total_amount = Column(Numeric(14, 2), default=0)
+    exception_type = Column(String(100))
+    classification = Column(String(100))
+    risk_score = Column(Integer, default=50)
+    description = Column(Text)
+    resolved = Column(Boolean, default=False)
+    resolution_note = Column(Text)
+    follow_up_question = Column(Text)
+    linked_ledger_snapshot = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

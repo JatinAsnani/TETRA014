@@ -14,19 +14,36 @@ router = APIRouter()
 @router.get("")
 def list_ledger(
     account_name: Optional[str] = None,
+    account: Optional[str] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    target_account = account_name or account
     q = db.query(models.LedgerEntry).filter(models.LedgerEntry.user_id == user.id)
-    if account_name:
-        q = q.filter(models.LedgerEntry.account_name == account_name)
+    if target_account:
+        q = q.filter(models.LedgerEntry.account_name == target_account)
     if from_date:
         q = q.filter(models.LedgerEntry.entry_date >= from_date)
     if to_date:
         q = q.filter(models.LedgerEntry.entry_date <= to_date)
-    return q.order_by(models.LedgerEntry.entry_date, models.LedgerEntry.id).all()
+    entries = q.order_by(models.LedgerEntry.entry_date, models.LedgerEntry.id).all()
+    return [
+        {
+            "id": e.id,
+            "date": str(e.entry_date),
+            "entry_date": str(e.entry_date),
+            "voucher": f"VCH-{e.reference_id or e.id:04d}",
+            "particulars": e.description or e.account_name,
+            "debit": float(e.debit or 0),
+            "credit": float(e.credit or 0),
+            "balance": float(e.balance or 0),
+            "account_name": e.account_name,
+            "account_type": e.account_type.value if hasattr(e.account_type, "value") else e.account_type,
+        }
+        for e in entries
+    ]
 
 
 @router.get("/account/{account_name}")
@@ -52,10 +69,13 @@ def account_ledger(
         running = float(e.balance)
         result.append({
             "id": e.id,
-            "entry_date": e.entry_date,
+            "date": str(e.entry_date),
+            "entry_date": str(e.entry_date),
+            "voucher": f"VCH-{e.reference_id or e.id:04d}",
+            "particulars": e.description or e.account_name,
             "description": e.description,
-            "debit": float(e.debit),
-            "credit": float(e.credit),
+            "debit": float(e.debit or 0),
+            "credit": float(e.credit or 0),
             "balance": running,
         })
     return {"account_name": account_name, "entries": result}
@@ -83,9 +103,12 @@ def list_accounts(
     )
     return [
         {
+            "name": e.account_name,
             "account_name": e.account_name,
-            "account_type": e.account_type.value if hasattr(e.account_type, "value") else e.account_type,
-            "balance": float(e.balance),
+            "type": e.account_type.value if hasattr(e.account_type, "value") else str(e.account_type),
+            "account_type": e.account_type.value if hasattr(e.account_type, "value") else str(e.account_type),
+            "balance": float(e.balance or 0),
+            "neg": float(e.balance or 0) < 0
         }
         for e in entries
     ]

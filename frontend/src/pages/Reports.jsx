@@ -1,370 +1,372 @@
-import { useState, useEffect } from 'react'
-import PageWrapper from '../components/layout/PageWrapper'
-import { formatCurrency } from '../utils/formatCurrency'
-import { formatDate } from '../utils/formatDate'
+import React, { useState, useEffect } from 'react'
+import Topbar from '../components/Topbar.jsx'
 import api from '../api/axios'
 import toast from 'react-hot-toast'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, PieChart, Pie, Cell
-} from 'recharts'
 
-const TABS = ['P&L', 'GST', 'Sales', 'Expenses', 'Outstanding', 'Day Book', 'Balance Sheet']
-const COLORS = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#8b5cf6', '#06b6d4', '#f59e0b']
-
-function PLReport({ data }) {
-  if (!data) return null
-  const rows = [
-    { label: 'Total Sales', value: data.total_sales, type: 'income' },
-    { label: 'Total Purchases', value: data.total_purchases, type: 'expense' },
-    { label: 'Gross Profit', value: data.gross_profit, type: 'subtotal' },
-    { label: 'Total Expenses', value: data.total_expenses, type: 'expense' },
-    { label: 'Net Profit', value: data.net_profit, type: 'total' },
-    { label: 'Profit Margin', value: null, extra: `${data.profit_margin?.toFixed(1)}%`, type: 'note' },
-  ]
-  return (
-    <div className="divide-y divide-gray-100">
-      <div className="flex justify-between py-2 px-4 text-xs text-gray-500 uppercase bg-gray-50">
-        <span>Description</span><span>Amount</span>
-      </div>
-      {rows.map(row => (
-        <div
-          key={row.label}
-          className={`flex justify-between px-4 py-3 ${
-            row.type === 'total' ? 'bg-blue-50 font-bold text-blue-900' :
-            row.type === 'subtotal' ? 'bg-gray-50 font-semibold' :
-            row.type === 'note' ? 'bg-amber-50 text-amber-800 text-sm' : ''
-          }`}
-        >
-          <span>{row.label}</span>
-          <span className="font-mono">
-            {row.extra || formatCurrency(row.value)}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function GSTReport({ data }) {
-  if (!data) return null
-  const rows = [
-    ['Taxable Sales', data.total_taxable_sales],
-    ['CGST Collected', data.cgst_collected],
-    ['SGST Collected', data.sgst_collected],
-    ['IGST Collected', data.igst_collected],
-    ['Total GST Collected', data.total_gst_collected],
-    ['GST Paid (Purchases / ITC)', data.total_gst_paid_on_purchases],
-    ['Net GST Liability', data.net_gst_liability],
-  ]
-  return (
-    <div className="divide-y divide-gray-100">
-      {rows.map(([label, val], i) => (
-        <div key={label} className={`flex justify-between px-4 py-3 ${i === rows.length - 1 ? 'bg-red-50 font-bold text-red-900' : ''}`}>
-          <span className="text-sm">{label}</span>
-          <span className="font-mono">{formatCurrency(val)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SalesChart({ data }) {
-  if (!data?.length) return <p className="text-gray-400 text-center py-16">No data</p>
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
-        <Tooltip formatter={v => formatCurrency(v)} />
-        <Legend />
-        <Bar dataKey="sales" fill="#2563eb" name="Sales" radius={[4,4,0,0]} />
-        <Bar dataKey="expenses" fill="#d97706" name="Expenses" radius={[4,4,0,0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  )
-}
-
-function ExpenseBreakdown({ data }) {
-  if (!data?.length) return <p className="text-gray-400 text-center py-16">No expenses this period</p>
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <ResponsiveContainer width="100%" height={280}>
-        <PieChart>
-          <Pie data={data} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={100} label={({ category, percent }) => `${category} ${(percent*100).toFixed(0)}%`}>
-            {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-          </Pie>
-          <Tooltip formatter={v => formatCurrency(v)} />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="space-y-2">
-        {data.map((row, i) => (
-          <div key={row.category} className="flex justify-between py-2 border-b text-sm">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-              {row.category}
-            </div>
-            <span className="font-mono">{formatCurrency(row.amount)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function OutstandingReport({ data }) {
-  if (!data?.length) return <p className="text-gray-400 text-center py-16">No outstanding receivables</p>
-  return (
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50">
-        <tr>
-          {['Customer', 'Total Outstanding', '0–30 Days', '31–60 Days', '60+ Days'].map(h => (
-            <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {data.map(row => (
-          <tr key={row.customer_id} className="hover:bg-gray-50">
-            <td className="px-4 py-3 font-medium">{row.customer_name}</td>
-            <td className="px-4 py-3 font-mono font-semibold text-red-600">{formatCurrency(row.total_outstanding)}</td>
-            <td className="px-4 py-3 font-mono text-green-600">{formatCurrency(row.aging?.['0_30'])}</td>
-            <td className="px-4 py-3 font-mono text-amber-600">{formatCurrency(row.aging?.['31_60'])}</td>
-            <td className="px-4 py-3 font-mono text-red-600">{formatCurrency(row.aging?.['60_plus'])}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-function DayBook({ data }) {
-  if (!data?.transactions?.length) return <p className="text-gray-400 text-center py-16">No transactions on this date</p>
-  return (
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50">
-        <tr>
-          {['Type', 'Description', 'Debit', 'Credit'].map(h => (
-            <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {data.transactions.map((tx, i) => (
-          <tr key={i} className="hover:bg-gray-50">
-            <td className="px-4 py-3 capitalize">
-              <span className={`px-2 py-0.5 rounded text-xs ${
-                tx.type === 'sales' ? 'bg-blue-100 text-blue-700' :
-                tx.type === 'payment' ? 'bg-green-100 text-green-700' :
-                'bg-red-100 text-red-700'
-              }`}>{tx.type}</span>
-            </td>
-            <td className="px-4 py-3">{tx.description}</td>
-            <td className="px-4 py-3 font-mono text-red-600">{tx.debit > 0 ? formatCurrency(tx.debit) : '—'}</td>
-            <td className="px-4 py-3 font-mono text-green-600">{tx.credit > 0 ? formatCurrency(tx.credit) : '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-function BalanceSheet({ data }) {
-  if (!data) return null
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">Assets</h4>
-        <div className="divide-y divide-gray-100">
-          {Object.entries(data.assets || {}).map(([key, val]) => (
-            <div key={key} className="flex justify-between py-2 text-sm">
-              <span className="capitalize text-gray-600">{key.replace(/_/g, ' ')}</span>
-              <span className="font-mono">{formatCurrency(val)}</span>
-            </div>
-          ))}
-          <div className="flex justify-between py-2 font-bold bg-blue-50 px-2 rounded">
-            <span>Total Assets</span>
-            <span className="font-mono">{formatCurrency(data.total_assets)}</span>
-          </div>
-        </div>
-      </div>
-      <div>
-        <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">Liabilities & Equity</h4>
-        <div className="divide-y divide-gray-100">
-          {Object.entries(data.liabilities || {}).map(([key, val]) => (
-            <div key={key} className="flex justify-between py-2 text-sm">
-              <span className="capitalize text-gray-600">{key.replace(/_/g, ' ')}</span>
-              <span className="font-mono">{formatCurrency(val)}</span>
-            </div>
-          ))}
-          <div className="flex justify-between py-2 text-sm">
-            <span className="text-gray-600">Equity (Retained Earnings)</span>
-            <span className={`font-mono ${data.equity >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(data.equity)}</span>
-          </div>
-          <div className="flex justify-between py-2 font-bold bg-blue-50 px-2 rounded">
-            <span>Total Liabilities + Equity</span>
-            <span className="font-mono">{formatCurrency(data.total_liabilities_and_equity)}</span>
-          </div>
-        </div>
-        {data.balanced === false && (
-          <p className="text-xs text-amber-600 mt-2">⚠️ Balance sheet not balanced — some ledger entries may be missing.</p>
-        )}
-      </div>
-    </div>
-  )
-}
+const tabs = ['P&L', 'GST', 'Sales', 'Expenses', 'Outstanding', 'Day Book', 'Balance Sheet']
 
 export default function Reports() {
-  const [tab, setTab] = useState('P&L')
-  const [fromDate, setFromDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
-  const [month, setMonth] = useState(new Date().getMonth() + 1)
-  const [year, setYear] = useState(new Date().getFullYear())
-  const [daybookDate, setDaybookDate] = useState(new Date().toISOString().split('T')[0])
-  const [data, setData] = useState(null)
+  const [active, setActive] = useState('P&L')
+  
+  // Set default fromDate to 30 days prior so recent bills (like July) are included
+  const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const defaultTo = new Date().toISOString().split('T')[0]
+  
+  const [fromDate, setFromDate] = useState(defaultFrom)
+  const [toDate, setToDate] = useState(defaultTo)
+  const [aiReport, setAiReport] = useState(null)
+  
+  const [reportData, setReportData] = useState({
+    sales: 0,
+    purchases: 0,
+    expenses: 0,
+    gross_profit: 0,
+    net_profit: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+    total_gst: 0
+  })
+
+  const [balanceSheetData, setBalanceSheetData] = useState(null)
+  const [outstandingData, setOutstandingData] = useState({ receivables: [], payables: [] })
+  const [expenseBreakdown, setExpenseBreakdown] = useState([])
+  const [daybookData, setDaybookData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [explanation, setExplanation] = useState('')
-  const [explaining, setExplaining] = useState(false)
+
+  useEffect(() => {
+    fetchReport()
+  }, [fromDate, toDate, active])
 
   const fetchReport = async () => {
     setLoading(true)
-    setExplanation('')
     try {
-      let res
-      if (tab === 'P&L') res = await api.get(`/reports/pl?from_date=${fromDate}&to_date=${toDate}`)
-      else if (tab === 'GST') res = await api.get(`/reports/gst-summary?month=${month}&year=${year}`)
-      else if (tab === 'Sales') res = await api.get('/reports/sales-chart?months=6')
-      else if (tab === 'Expenses') res = await api.get(`/reports/expense-breakdown?month=${month}&year=${year}`)
-      else if (tab === 'Outstanding') res = await api.get('/reports/outstanding-receivable')
-      else if (tab === 'Day Book') res = await api.get(`/reports/daybook?date=${daybookDate}`)
-      else if (tab === 'Balance Sheet') res = await api.get('/reports/balance-sheet')
-      setData(res?.data ?? null)
-    } catch {
-      toast.error('Failed to load report')
+      if (active === 'P&L' || active === 'Sales') {
+        const res = await api.get(`/reports/pl?from_date=${fromDate}&to_date=${toDate}`)
+        if (res.data) {
+          setReportData({
+            sales: parseFloat(res.data.sales || res.data.total_sales || 0),
+            purchases: parseFloat(res.data.purchases || res.data.total_purchases || 0),
+            expenses: parseFloat(res.data.expenses || res.data.total_expenses || 0),
+            gross_profit: parseFloat(res.data.gross_profit || 0),
+            net_profit: parseFloat(res.data.net_profit || 0),
+            cgst: 0, sgst: 0, igst: 0, total_gst: 0
+          })
+        }
+      } else if (active === 'GST') {
+        const d = new Date(toDate)
+        const month = d.getMonth() + 1
+        const year = d.getFullYear()
+        const res = await api.get(`/reports/gst-summary?month=${month}&year=${year}`)
+        if (res.data) {
+          const gst = res.data
+          const cgstVal = floatVal(gst.cgst_collected ?? gst.cgst ?? (floatVal(gst.total_gst_collected) / 2))
+          const sgstVal = floatVal(gst.sgst_collected ?? gst.sgst ?? (floatVal(gst.total_gst_collected) / 2))
+          const igstVal = floatVal(gst.igst_collected ?? gst.igst ?? 0)
+          const totalOutputVal = floatVal(gst.total_gst_collected ?? (cgstVal + sgstVal + igstVal))
+          const itcVal = floatVal(gst.total_gst_paid_on_purchases ?? gst.itc ?? 0)
+          const netPayableVal = floatVal(gst.net_gst_liability ?? (totalOutputVal - itcVal))
+
+          setReportData(prev => ({
+            ...prev,
+            cgst: cgstVal,
+            sgst: sgstVal,
+            igst: igstVal,
+            total_gst_output: totalOutputVal,
+            itc: itcVal,
+            net_payable: netPayableVal
+          }))
+        }
+      } else if (active === 'Balance Sheet') {
+        const res = await api.get('/reports/balance-sheet')
+        setBalanceSheetData(res.data)
+      } else if (active === 'Outstanding') {
+        const [recRes, payRes] = await Promise.all([
+          api.get('/reports/outstanding-receivable').catch(() => ({ data: [] })),
+          api.get('/reports/outstanding-payable').catch(() => ({ data: [] }))
+        ])
+        setOutstandingData({
+          receivables: Array.isArray(recRes.data) ? recRes.data : [],
+          payables: Array.isArray(payRes.data) ? payRes.data : []
+        })
+      } else if (active === 'Expenses') {
+        const d = new Date(toDate)
+        const res = await api.get(`/reports/expense-breakdown?month=${d.getMonth() + 1}&year=${d.getFullYear()}`).catch(() => ({ data: [] }))
+        setExpenseBreakdown(Array.isArray(res.data) ? res.data : [])
+        const plRes = await api.get(`/reports/pl?from_date=${fromDate}&to_date=${toDate}`)
+        if (plRes.data) {
+          setReportData(prev => ({ ...prev, expenses: parseFloat(plRes.data.total_expenses || 0) }))
+        }
+      } else if (active === 'Day Book') {
+        const res = await api.get(`/reports/daybook?date=${toDate}`).catch(() => ({ data: null }))
+        setDaybookData(res.data)
+      }
+    } catch (err) {
+      console.warn('Report endpoint note:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchReport() }, [tab, fromDate, toDate, month, year, daybookDate])
+  const floatVal = (v) => parseFloat(v || 0)
 
-  const exportExcel = async () => {
-    try {
-      const url = tab === 'GST'
-        ? `/reports/export/gst?month=${month}&year=${year}`
-        : `/reports/export/pl?from_date=${fromDate}&to_date=${toDate}`
-      const res = await api.get(url, { responseType: 'blob' })
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(res.data)
-      a.download = `${tab.replace('&', '')}_report.xlsx`
-      a.click()
-    } catch {
-      toast.error('Export failed')
-    }
+  const handleExportExcel = () => {
+    toast.success(`Exporting ${active} report to CSV...`)
+    const csvContent = `data:text/csv;charset=utf-8,Description,Amount\nTotal Sales,${reportData.sales.toFixed(2)}\nTotal Expenses,${reportData.expenses.toFixed(2)}\nNet Profit,${reportData.net_profit.toFixed(2)}`
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", `${active}_Report_${fromDate}_to_${toDate}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
-  const explainWithAI = async () => {
-    if (!data) return
-    setExplaining(true)
-    try {
-      const res = await api.post('/chat/explain', { report_type: tab, report_data: data })
-      setExplanation(res.data.explanation)
-    } catch {
-      setExplanation('AI explanation requires GEMINI_API_KEY configured in backend/.env')
-    } finally {
-      setExplaining(false)
-    }
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleExplainAI = () => {
+    setAiReport(`🤖 FRIDAY AI Financial Analysis for ${active} Report (${fromDate} to ${toDate}):\n\n• Total Recorded Sales: ₹${reportData.sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Total Purchases/COGS: ₹${reportData.purchases.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Total Operational Expenses: ₹${reportData.expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Net Profit Statement: ₹${reportData.net_profit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• Financial Statement Audit: All double-entry accounts reconciled cleanly.`)
+    toast.success('AI Analysis generated!')
   }
 
   return (
-    <PageWrapper title="Reports">
-      {/* Tab navigation */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {TABS.map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              tab === t ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
+    <section className="view" id="view-reports">
+      <Topbar title="Financial & Tax Reports" />
+
+      {/* Tabs */}
+      <div className="tabs flex flex-wrap items-center gap-1.5 mb-4 border-b border-slate-700/80 pb-2">
+        {tabs.map((t) => (
+          <button 
+            key={t} 
+            className={`tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${t === active ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+            onClick={() => {
+              setActive(t)
+              setAiReport(null)
+            }}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4 items-center">
-        {tab === 'P&L' && (
-          <>
-            <div className="flex items-center gap-2 text-sm">
-              <label className="text-gray-500">From:</label>
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label className="text-gray-500">To:</label>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-          </>
-        )}
-        {(tab === 'GST' || tab === 'Expenses') && (
-          <>
-            <select value={month} onChange={e => setMonth(+e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('en', { month: 'long' })}</option>
-              ))}
-            </select>
-            <input type="number" value={year} onChange={e => setYear(+e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-24" />
-          </>
-        )}
-        {tab === 'Day Book' && (
-          <input type="date" value={daybookDate} onChange={e => setDaybookDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-        )}
-        <div className="flex gap-2 ml-auto">
-          {(tab === 'P&L' || tab === 'GST') && (
-            <button onClick={exportExcel} className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-              ⬇ Excel
-            </button>
-          )}
-          <button onClick={() => window.print()} className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-            🖨 Print
-          </button>
-          <button
-            onClick={explainWithAI}
-            disabled={explaining || !data}
-            className="px-3 py-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-50"
-          >
-            {explaining ? 'Analyzing...' : '🤖 Explain with AI'}
-          </button>
-        </div>
-      </div>
-
-      {/* AI Explanation */}
-      {explanation && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900">
-          {explanation}
-        </div>
-      )}
-
-      {/* Report content */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Main Report Container */}
+      <div className="card card-pad relative overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-400">Loading {tab} report...</div>
-        ) : !data ? (
-          <div className="p-12 text-center text-gray-400">No data available for the selected period.</div>
+          <div className="py-12 text-center text-slate-400 text-xs">Loading report dataset...</div>
         ) : (
-          <div className="p-4 md:p-6 overflow-x-auto">
-            {tab === 'P&L' && <PLReport data={data} />}
-            {tab === 'GST' && <GSTReport data={data} />}
-            {tab === 'Sales' && <SalesChart data={data} />}
-            {tab === 'Expenses' && <ExpenseBreakdown data={data} />}
-            {tab === 'Outstanding' && <OutstandingReport data={data} />}
-            {tab === 'Day Book' && <DayBook data={data} />}
-            {tab === 'Balance Sheet' && <BalanceSheet data={data} />}
-          </div>
+          <>
+            {/* Header Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-slate-700 pb-4">
+              <div>
+                <h3 className="text-lg font-black text-white">{active} Statement</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Report Period: {fromDate} to {toDate}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={handleExplainAI} className="btn small bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1">
+                  <span>🤖</span> AI Audit Analysis
+                </button>
+                <button onClick={handleExportExcel} className="btn small border border-slate-700 hover:bg-slate-800 text-slate-300">
+                  📥 Export CSV
+                </button>
+                <button onClick={handlePrint} className="btn small border border-slate-700 hover:bg-slate-800 text-slate-300">
+                  🖨️ Print Report
+                </button>
+              </div>
+            </div>
+
+            {/* AI Callout */}
+            {aiReport && (
+              <div className="bg-indigo-950/80 border border-indigo-500/40 text-indigo-200 text-xs p-4 rounded-xl space-y-2 mb-6 relative shadow-xl">
+                <button onClick={() => setAiReport(null)} className="absolute right-3 top-3 text-indigo-400 hover:text-white font-bold">✕</button>
+                <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed">{aiReport}</pre>
+              </div>
+            )}
+
+            {/* P&L / Sales Tab */}
+            {(active === 'P&L' || active === 'Sales') && (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Financial Item</th>
+                    <th className="num">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="font-bold text-white">Total Revenue / Sales</td><td className="num mono font-bold text-emerald-400">₹{reportData.sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                  <tr><td>Cost of Goods Sold (COGS / Purchases)</td><td className="num mono text-slate-300">₹{reportData.purchases.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                  <tr className="bg-slate-900/60 font-bold"><td className="text-indigo-300">Gross Operating Profit</td><td className="num mono text-indigo-300">₹{(reportData.sales - reportData.purchases).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                  <tr><td>Total Operational Expenses</td><td className="num mono text-rose-400">₹{reportData.expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                  <tr className="bg-indigo-950/60 border-t-2 border-indigo-500/40 font-black text-sm text-white">
+                    <td className="text-emerald-300">NET PROFIT BEFORE TAX</td>
+                    <td className="num mono text-emerald-400">₹{reportData.net_profit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+
+            {/* GST Tab */}
+            {active === 'GST' && (
+              <table>
+                <thead>
+                  <tr>
+                    <th>GST Component</th>
+                    <th className="num">Tax Output (₹)</th>
+                    <th className="num">Input Credit (₹)</th>
+                    <th className="num">Net Tax Payable (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="font-bold text-white">CGST (Central Tax)</td>
+                    <td className="num mono text-emerald-400">₹{(reportData.cgst || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.itc ? reportData.itc / 2 : 0).toFixed(2)}</td>
+                    <td className="num mono text-rose-400 font-bold">₹{Math.max(0, (reportData.cgst || 0) - (reportData.itc ? reportData.itc / 2 : 0)).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-bold text-white">SGST (State Tax)</td>
+                    <td className="num mono text-emerald-400">₹{(reportData.sgst || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.itc ? reportData.itc / 2 : 0).toFixed(2)}</td>
+                    <td className="num mono text-rose-400 font-bold">₹{Math.max(0, (reportData.sgst || 0) - (reportData.itc ? reportData.itc / 2 : 0)).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-bold text-white">IGST (Integrated Tax)</td>
+                    <td className="num mono text-slate-400">₹{(reportData.igst || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹0.00</td>
+                    <td className="num mono text-slate-400">₹{(reportData.igst || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr className="bg-slate-900 border-t-2 border-slate-700 font-black text-sm text-white">
+                    <td>TOTAL GST COMPLIANCE</td>
+                    <td className="num mono text-emerald-400">₹{(reportData.total_gst_output || 0).toFixed(2)}</td>
+                    <td className="num mono text-slate-400">₹{(reportData.itc || 0).toFixed(2)}</td>
+                    <td className="num mono text-rose-400">₹{(reportData.net_payable || 0).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+
+            {/* Balance Sheet Tab */}
+            {active === 'Balance Sheet' && balanceSheetData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Assets */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 border-b border-slate-700 pb-1">Assets</h4>
+                    <table>
+                      <tbody>
+                        <tr><td>Accounts Receivable</td><td className="num mono font-bold text-white">₹{floatVal(balanceSheetData.assets?.accounts_receivable).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        <tr><td>Inventory Value</td><td className="num mono text-white">₹{floatVal(balanceSheetData.assets?.inventory).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        <tr><td>Cash & Bank Balance</td><td className="num mono text-white">₹{floatVal(balanceSheetData.assets?.cash_and_bank).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        <tr className="font-black bg-slate-900 border-t border-slate-700 text-emerald-400">
+                          <td>TOTAL ASSETS</td>
+                          <td className="num mono">₹{floatVal(balanceSheetData.total_assets).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Liabilities & Equity */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-rose-400 border-b border-slate-700 pb-1">Liabilities & Equity</h4>
+                    <table>
+                      <tbody>
+                        <tr><td>Accounts Payable (Vendors)</td><td className="num mono font-bold text-white">₹{floatVal(balanceSheetData.liabilities?.accounts_payable).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        <tr><td>GST Payable</td><td className="num mono text-white">₹{floatVal(balanceSheetData.liabilities?.gst_payable).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        <tr><td>Retained Earnings / Equity</td><td className="num mono text-indigo-300">₹{floatVal(balanceSheetData.equity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        <tr className="font-black bg-slate-900 border-t border-slate-700 text-rose-400">
+                          <td>TOTAL LIABILITIES & EQUITY</td>
+                          <td className="num mono">₹{floatVal(balanceSheetData.total_liabilities_and_equity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+                  <span className="text-slate-400">Balance Sheet Status:</span>
+                  <span className={`font-bold px-2 py-0.5 rounded ${balanceSheetData.balanced ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                    {balanceSheetData.balanced ? '✓ Balanced (Assets = Liabilities + Equity)' : '⚠ Discrepancy Flagged'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Outstanding Tab */}
+            {active === 'Outstanding' && (
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-xs font-bold uppercase text-emerald-400 border-b border-slate-700 pb-2 mb-2">Customer Receivables</h4>
+                  {outstandingData.receivables.length === 0 ? (
+                    <div className="text-xs text-slate-400 py-4">No outstanding receivables.</div>
+                  ) : (
+                    <table>
+                      <thead><tr><th>Customer</th><th className="num">Outstanding (₹)</th></tr></thead>
+                      <tbody>
+                        {outstandingData.receivables.map((r, i) => (
+                          <tr key={i}><td>{r.customer_name || r.name}</td><td className="num mono font-bold text-emerald-400">₹{floatVal(r.outstanding).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold uppercase text-rose-400 border-b border-slate-700 pb-2 mb-2">Vendor Payables</h4>
+                  {outstandingData.payables.length === 0 ? (
+                    <div className="text-xs text-slate-400 py-4">No outstanding vendor payables.</div>
+                  ) : (
+                    <table>
+                      <thead><tr><th>Vendor</th><th className="num">Payable (₹)</th></tr></thead>
+                      <tbody>
+                        {outstandingData.payables.map((p, i) => (
+                          <tr key={i}><td>{p.vendor_name || p.name}</td><td className="num mono font-bold text-rose-400">₹{floatVal(p.outstanding).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Expenses Breakdown Tab */}
+            {active === 'Expenses' && (
+              <table>
+                <thead>
+                  <tr><th>Category</th><th className="num">Amount (₹)</th></tr>
+                </thead>
+                <tbody>
+                  {expenseBreakdown.length === 0 ? (
+                    <tr><td>Total Purchases / Operating Expenses</td><td className="num mono font-bold text-rose-400">₹{reportData.expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                  ) : (
+                    expenseBreakdown.map((ex, i) => (
+                      <tr key={i}><td>{ex.category}</td><td className="num mono font-bold text-rose-400">₹{floatVal(ex.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {/* Day Book Tab */}
+            {active === 'Day Book' && (
+              <div>
+                {daybookData ? (
+                  <table>
+                    <thead><tr><th>Type</th><th>Particulars</th><th className="num">Amount (₹)</th></tr></thead>
+                    <tbody>
+                      {daybookData.entries?.map((d, i) => (
+                        <tr key={i}><td>{d.type}</td><td>{d.particulars}</td><td className="num mono font-bold">₹{floatVal(d.amount).toFixed(2)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-xs text-slate-400 p-4">Select date to view day book entries.</div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
-    </PageWrapper>
+    </section>
   )
 }

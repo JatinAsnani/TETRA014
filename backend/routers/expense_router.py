@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from database import get_db
-from deps import get_current_user
+from deps import get_current_user, get_org_id
 from features.ledger_engine import create_expense_ledger, reverse_expense_ledger
+from services.activity_logger import log_activity
 import models
 import schemas
 
@@ -18,10 +19,19 @@ def create_expense(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    expense = models.Expense(user_id=user.id, **data.model_dump())
+    org_id = get_org_id(user, db)
+    expense = models.Expense(user_id=org_id, **data.model_dump())
     db.add(expense)
     db.flush()
-    create_expense_ledger(db, user.id, expense)
+    create_expense_ledger(db, org_id, expense)
+    log_activity(
+        db, user,
+        action_type="CREATE_EXPENSE",
+        entity_type="expense",
+        entity_id=expense.id,
+        description=f"Logged Expense '{expense.category}' ({expense.description or 'No notes'})",
+        amount=float(expense.amount),
+    )
     db.commit()
     db.refresh(expense)
     return expense
@@ -35,7 +45,8 @@ def list_expenses(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.Expense).filter(models.Expense.user_id == user.id)
+    org_id = get_org_id(user, db)
+    q = db.query(models.Expense).filter(models.Expense.user_id == org_id)
     if category:
         q = q.filter(models.Expense.category == category)
     if from_date:
@@ -52,15 +63,24 @@ def update_expense(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     expense = (
         db.query(models.Expense)
-        .filter(models.Expense.id == expense_id, models.Expense.user_id == user.id)
+        .filter(models.Expense.id == expense_id, models.Expense.user_id == org_id)
         .first()
     )
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(expense, field, value)
+    log_activity(
+        db, user,
+        action_type="UPDATE_EXPENSE",
+        entity_type="expense",
+        entity_id=expense.id,
+        description=f"Updated Expense '{expense.category}'",
+        amount=float(expense.amount),
+    )
     db.commit()
     db.refresh(expense)
     return expense
@@ -72,20 +92,30 @@ def delete_expense(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     expense = (
         db.query(models.Expense)
-        .filter(models.Expense.id == expense_id, models.Expense.user_id == user.id)
+        .filter(models.Expense.id == expense_id, models.Expense.user_id == org_id)
         .first()
     )
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
-    reverse_expense_ledger(db, user.id, expense)
+    reverse_expense_ledger(db, org_id, expense)
+    log_activity(
+        db, user,
+        action_type="DELETE_EXPENSE",
+        entity_type="expense",
+        entity_id=expense.id,
+        description=f"Deleted Expense '{expense.category}'",
+        amount=float(expense.amount),
+    )
     db.delete(expense)
     db.commit()
     return {"message": "Expense deleted"}
 
 
 async def add_expense_from_ai(tool_input: dict, user_id: int, db) -> dict:
+    from datetime import datetime
     vendor_id = None
     if tool_input.get("vendor_name"):
         vendor = (
@@ -96,7 +126,6 @@ async def add_expense_from_ai(tool_input: dict, user_id: int, db) -> dict:
         if vendor:
             vendor_id = vendor.id
 
-    from datetime import datetime
     exp_date = tool_input.get("expense_date")
     if exp_date:
         exp_date = datetime.strptime(exp_date, "%Y-%m-%d").date()
@@ -116,6 +145,7 @@ async def add_expense_from_ai(tool_input: dict, user_id: int, db) -> dict:
     db.flush()
     create_expense_ledger(db, user_id, expense)
     db.commit()
+    db.refresh(expense)
     return {
         "success": True,
         "category": expense.category,

@@ -5,7 +5,7 @@ export default function ChatBubble({ role, message, action, data }) {
       <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
         isUser ? 'bg-primary text-white rounded-br-md' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
       }`}>
-        {!isUser && <p className="text-xs font-medium text-primary mb-1">TallAI</p>}
+        {!isUser && <p className="text-xs font-medium text-primary mb-1">FRIDAY</p>}
         <p className="text-sm whitespace-pre-wrap">{message}</p>
         {action && data && !isUser && (
           <ActionCard action={action} data={data} />

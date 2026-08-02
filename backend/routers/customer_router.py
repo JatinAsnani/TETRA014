@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import Optional
 from database import get_db
-from deps import get_current_user
+from deps import get_current_user, get_org_id
+from services.activity_logger import log_activity
 import models
 import schemas
 
@@ -16,8 +17,18 @@ def create_customer(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    customer = models.Customer(user_id=user.id, **data.model_dump())
+    org_id = get_org_id(user, db)
+    customer = models.Customer(user_id=org_id, **data.model_dump())
     db.add(customer)
+    db.flush()
+    log_activity(
+        db, user,
+        action_type="CREATE_CUSTOMER",
+        entity_type="customer",
+        entity_id=customer.id,
+        description=f"Added Customer '{customer.name}'",
+        amount=0,
+    )
     db.commit()
     db.refresh(customer)
     return customer
@@ -30,7 +41,8 @@ def list_customers(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.Customer).filter(models.Customer.user_id == user.id)
+    org_id = get_org_id(user, db)
+    q = db.query(models.Customer).filter(models.Customer.user_id == org_id)
     if search:
         q = q.filter(or_(
             models.Customer.name.ilike(f"%{search}%"),
@@ -48,9 +60,10 @@ def get_customer(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     customer = (
         db.query(models.Customer)
-        .filter(models.Customer.id == customer_id, models.Customer.user_id == user.id)
+        .filter(models.Customer.id == customer_id, models.Customer.user_id == org_id)
         .first()
     )
     if not customer:
@@ -82,15 +95,24 @@ def update_customer(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     customer = (
         db.query(models.Customer)
-        .filter(models.Customer.id == customer_id, models.Customer.user_id == user.id)
+        .filter(models.Customer.id == customer_id, models.Customer.user_id == org_id)
         .first()
     )
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(customer, field, value)
+    log_activity(
+        db, user,
+        action_type="UPDATE_CUSTOMER",
+        entity_type="customer",
+        entity_id=customer.id,
+        description=f"Updated details for Customer '{customer.name}'",
+        amount=0,
+    )
     db.commit()
     db.refresh(customer)
     return customer
@@ -102,9 +124,10 @@ def delete_customer(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    org_id = get_org_id(user, db)
     customer = (
         db.query(models.Customer)
-        .filter(models.Customer.id == customer_id, models.Customer.user_id == user.id)
+        .filter(models.Customer.id == customer_id, models.Customer.user_id == org_id)
         .first()
     )
     if not customer:

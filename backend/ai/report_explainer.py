@@ -24,7 +24,7 @@ async def explain_report(report_data: dict, report_type: str) -> str:
         response = model.generate_content(prompt)
         return response.text if hasattr(response, "text") else _fallback_explanation(report_data, report_type)
     except Exception as exc:
-        print(f"[TallAI] report_explainer error: {exc}")
+        print(f"[FRIDAY] report_explainer error: {exc}")
         return _fallback_explanation(report_data, report_type)
 
 

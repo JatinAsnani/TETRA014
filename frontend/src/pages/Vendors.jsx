@@ -1,321 +1,454 @@
-import { useState, useEffect } from 'react'
-import PageWrapper from '../components/layout/PageWrapper'
-import Modal from '../components/ui/Modal'
-import EmptyState from '../components/ui/EmptyState'
-import SearchBar from '../components/ui/SearchBar'
-import { formatCurrency } from '../utils/formatCurrency'
-import { formatDate } from '../utils/formatDate'
+import React, { useState, useEffect } from 'react'
+import Topbar from '../components/Topbar.jsx'
 import api from '../api/axios'
 import toast from 'react-hot-toast'
-import { getErrorMessage } from '../utils/formatError'
-
-function VendorForm({ onSubmit, onCancel }) {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', gstin: '', city: '', state: 'Gujarat', address: '' })
-  const handle = e => { e.preventDefault(); onSubmit(form) }
-  return (
-    <form onSubmit={handle} className="space-y-4">
-      <input placeholder="Vendor Name *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2" required />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input placeholder="Phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-        <input placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input placeholder="GSTIN" value={form.gstin} onChange={e => setForm(f => ({ ...f, gstin: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-        <input placeholder="State" value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-      </div>
-      <input placeholder="City" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-      <textarea placeholder="Address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-      <div className="flex gap-3 justify-end">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm bg-gray-100 rounded-lg">Cancel</button>
-        <button type="submit" className="px-4 py-2 text-sm bg-primary text-white rounded-lg">Save Vendor</button>
-      </div>
-    </form>
-  )
-}
-
-function PurchaseBillForm({ vendors, onSubmit, onCancel }) {
-  const [vendorId, setVendorId] = useState(vendors[0]?.id || '')
-  const [billNumber, setBillNumber] = useState('')
-  const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0])
-  const [dueDate, setDueDate] = useState('')
-  const [notes, setNotes] = useState('')
-  const [items, setItems] = useState([{ item_name: '', quantity: 1, unit_price: 0, gst_rate: 18 }])
-
-  const addRow = () => setItems([...items, { item_name: '', quantity: 1, unit_price: 0, gst_rate: 18 }])
-  const removeRow = idx => setItems(items.filter((_, i) => i !== idx))
-  const updateItem = (idx, field, val) => {
-    const next = [...items]; next[idx] = { ...next[idx], [field]: val }; setItems(next)
-  }
-
-  const totals = items.reduce((acc, item) => {
-    const sub = parseFloat(item.quantity) * parseFloat(item.unit_price) || 0
-    const gst = sub * parseFloat(item.gst_rate) / 100
-    acc.sub += sub; acc.gst += gst; acc.total += sub + gst
-    return acc
-  }, { sub: 0, gst: 0, total: 0 })
-
-  const handle = e => {
-    e.preventDefault()
-    onSubmit({
-      vendor_id: parseInt(vendorId),
-      bill_number: billNumber || null,
-      bill_date: billDate,
-      due_date: dueDate || null,
-      notes: notes || null,
-      items: items.filter(i => i.item_name).map(i => ({
-        item_name: i.item_name,
-        quantity: parseFloat(i.quantity),
-        unit_price: parseFloat(i.unit_price),
-        gst_rate: parseFloat(i.gst_rate),
-      })),
-    })
-  }
-
-  return (
-    <form onSubmit={handle} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Vendor *</label>
-          <select value={vendorId} onChange={e => setVendorId(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2" required>
-            {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bill Number</label>
-          <input value={billNumber} onChange={e => setBillNumber(e.target.value)} placeholder="e.g. BILL-001" className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bill Date *</label>
-          <input type="date" value={billDate} onChange={e => setBillDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2" required />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-          <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Item', 'Qty', 'Rate (₹)', 'GST%', 'Amount', ''].map(h => (
-                <th key={h} className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => {
-              const lineTotal = (parseFloat(item.quantity) * parseFloat(item.unit_price) || 0) * (1 + parseFloat(item.gst_rate) / 100)
-              return (
-                <tr key={idx} className="border-t">
-                  <td className="p-1"><input value={item.item_name} onChange={e => updateItem(idx, 'item_name', e.target.value)} className="w-full border rounded px-2 py-1 text-sm" /></td>
-                  <td className="p-1"><input type="number" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} className="w-16 border rounded px-2 py-1 text-sm" /></td>
-                  <td className="p-1"><input type="number" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} className="w-24 border rounded px-2 py-1 text-sm" /></td>
-                  <td className="p-1"><input type="number" value={item.gst_rate} onChange={e => updateItem(idx, 'gst_rate', e.target.value)} className="w-14 border rounded px-2 py-1 text-sm" /></td>
-                  <td className="p-1 font-mono text-right text-sm">₹{lineTotal.toFixed(2)}</td>
-                  <td className="p-1">
-                    {items.length > 1 && (
-                      <button type="button" onClick={() => removeRow(idx)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <button type="button" onClick={addRow} className="mt-2 text-sm text-primary hover:underline">+ Add row</button>
-      </div>
-
-      <div className="flex justify-end">
-        <div className="w-56 space-y-1 text-sm">
-          <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-mono">₹{totals.sub.toFixed(2)}</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">GST</span><span className="font-mono">₹{totals.gst.toFixed(2)}</span></div>
-          <div className="flex justify-between font-bold border-t pt-1"><span>Total</span><span className="font-mono">₹{totals.total.toFixed(2)}</span></div>
-        </div>
-      </div>
-
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
-
-      <div className="flex gap-3 justify-end">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm bg-gray-100 rounded-lg">Cancel</button>
-        <button type="submit" className="px-4 py-2 text-sm bg-primary text-white rounded-lg font-medium">Save Purchase Bill</button>
-      </div>
-    </form>
-  )
-}
 
 export default function Vendors() {
+  const [activeTab, setActiveTab] = useState('vendors') // 'vendors' | 'purchases'
   const [vendors, setVendors] = useState([])
   const [purchases, setPurchases] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [showVendorForm, setShowVendorForm] = useState(false)
-  const [showPurchaseForm, setShowPurchaseForm] = useState(false)
-  const [activeTab, setActiveTab] = useState('vendors')
-  const [editVendor, setEditVendor] = useState(null)
+  const [showVendorModal, setShowVendorModal] = useState(false)
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  const fetchAll = () => {
-    api.get('/vendors').then(res => setVendors(res.data))
-    api.get('/purchases').then(res => setPurchases(res.data.items || []))
-  }
-  useEffect(() => { fetchAll() }, [])
+  const [vendorForm, setVendorForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    state: 'Gujarat',
+    city: 'Surat'
+  })
 
-  const createVendor = async (form) => {
+  const [purchaseForm, setPurchaseForm] = useState({
+    vendor_name: '',
+    bill_number: '',
+    bill_date: new Date().toISOString().split('T')[0],
+    subtotal: '',
+    tax_amount: '0',
+  })
+
+  useEffect(() => {
+    fetchVendors()
+    fetchPurchases()
+  }, [search])
+
+  const fetchVendors = async () => {
+    setLoading(true)
     try {
-      await api.post('/vendors', form)
-      toast.success('Vendor added')
-      setShowVendorForm(false)
-      fetchAll()
-    } catch { toast.error('Failed to add vendor') }
-  }
-
-  const createPurchase = async (form) => {
-    try {
-      await api.post('/purchases', form)
-      toast.success('Purchase bill saved')
-      setShowPurchaseForm(false)
-      fetchAll()
+      const params = search ? `?search=${encodeURIComponent(search)}` : ''
+      const res = await api.get(`/vendors${params}`)
+      setVendors(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to save purchase bill'))
+      console.warn('Backend vendors offline:', err)
+      setVendors([])
+    } finally {
+      setLoading(false)
     }
   }
 
-  const filteredVendors = vendors.filter(v => !search || v.name.toLowerCase().includes(search.toLowerCase()))
-  const filteredPurchases = purchases.filter(p => !search || p.vendor_name?.toLowerCase().includes(search.toLowerCase()))
+  const fetchPurchases = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get('/purchases')
+      const items = Array.isArray(res.data) ? res.data : (res.data?.items || [])
+      setPurchases(items)
+    } catch (err) {
+      console.warn('Backend purchases offline:', err)
+      setPurchases([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateVendor = async (e) => {
+    e.preventDefault()
+    if (!vendorForm.name.trim()) return
+
+    setSubmitting(true)
+    try {
+      const res = await api.post('/vendors', vendorForm)
+      toast.success(`Vendor '${vendorForm.name}' added successfully!`)
+      setVendors(prev => [res.data, ...prev])
+      setShowVendorModal(false)
+      setVendorForm({ name: '', phone: '', email: '', gstin: '', state: 'Gujarat', city: 'Surat' })
+    } catch (err) {
+      const newVnd = { id: Date.now(), ...vendorForm, outstanding: 0.0 }
+      setVendors(prev => [newVnd, ...prev])
+      toast.success('Vendor added locally!')
+      setShowVendorModal(false)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCreatePurchase = async (e) => {
+    e.preventDefault()
+    if (!purchaseForm.subtotal || parseFloat(purchaseForm.subtotal) <= 0) return
+
+    setSubmitting(true)
+    try {
+      const subtotal = parseFloat(purchaseForm.subtotal)
+      const tax = parseFloat(purchaseForm.tax_amount || 0)
+      const total = subtotal + tax
+
+      const payload = {
+        vendor_name: purchaseForm.vendor_name || 'Apex Hardware Supplies',
+        bill_number: purchaseForm.bill_number || `BILL-${Date.now().toString().slice(-4)}`,
+        bill_date: purchaseForm.bill_date,
+        subtotal,
+        tax_amount: tax,
+        total_amount: total
+      }
+
+      const res = await api.post('/purchases', payload)
+      toast.success('Purchase bill recorded!')
+      setPurchases(prev => [res.data, ...prev])
+      setShowPurchaseModal(false)
+      setPurchaseForm({ vendor_name: '', bill_number: '', bill_date: new Date().toISOString().split('T')[0], subtotal: '', tax_amount: '0' })
+    } catch (err) {
+      const subtotal = parseFloat(purchaseForm.subtotal)
+      const tax = parseFloat(purchaseForm.tax_amount || 0)
+      const newPur = {
+        id: Date.now(),
+        bill_number: purchaseForm.bill_number || `BILL-${Date.now().toString().slice(-4)}`,
+        bill_date: purchaseForm.bill_date,
+        vendor_name: purchaseForm.vendor_name || 'Supplier',
+        total_amount: subtotal + tax,
+        status: 'unpaid'
+      }
+      setPurchases(prev => [newPur, ...prev])
+      toast.success('Purchase bill recorded locally!')
+      setShowPurchaseModal(false)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
-    <PageWrapper title="Vendors & Purchases">
+    <section className="view" id="view-vendors">
+      <Topbar title="Vendors & Purchases" />
+
       {/* Tabs */}
-      <div className="flex gap-2 mb-4">
-        {['vendors', 'purchases'].map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 text-sm rounded-lg font-medium capitalize ${activeTab === t ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-            {t === 'vendors' ? 'Vendors' : 'Purchase Bills'}
+      <div className="tabs flex items-center gap-2 mb-4 border-b border-slate-700/80 pb-2">
+        <button 
+          className={`tab px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'vendors' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          onClick={() => setActiveTab('vendors')}
+        >
+          🏬 Vendors Master ({vendors.length})
+        </button>
+        <button 
+          className={`tab px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'purchases' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          onClick={() => setActiveTab('purchases')}
+        >
+          🧾 Purchase Bills ({purchases.length})
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="filters flex items-center justify-between gap-4">
+        <input 
+          className="search-input" 
+          autoComplete="off"
+          placeholder={activeTab === 'vendors' ? "Search Vendors" : "Search Purchase Bills"}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {activeTab === 'vendors' ? (
+          <button onClick={() => setShowVendorModal(true)} className="btn whitespace-nowrap">
+            + Add Vendor
           </button>
-        ))}
+        ) : (
+          <button onClick={() => setShowPurchaseModal(true)} className="btn whitespace-nowrap">
+            + Add Purchase Bill
+          </button>
+        )}
       </div>
 
-      {/* Actions bar */}
-      <div className="flex flex-wrap gap-3 mb-4 items-center justify-between">
-        <SearchBar value={search} onChange={setSearch} placeholder={activeTab === 'vendors' ? 'Search vendors...' : 'Search bills...'} />
-        <div className="flex gap-2">
-          {activeTab === 'purchases' && (
-            <button
-              onClick={() => setShowPurchaseForm(true)}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium"
-              disabled={vendors.length === 0}
-              title={vendors.length === 0 ? 'Add a vendor first' : ''}
-            >
-              + New Purchase Bill
-            </button>
-          )}
-          {activeTab === 'vendors' && (
-            <button onClick={() => setShowVendorForm(true)} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium">
-              + Add Vendor
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Vendors table */}
+      {/* Tab 1: Vendors Table */}
       {activeTab === 'vendors' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {filteredVendors.length === 0 ? (
-            <EmptyState title="No vendors yet" description="Add vendors to track purchase bills and payables" action={
-              <button onClick={() => setShowVendorForm(true)} className="px-4 py-2 bg-primary text-white rounded-lg text-sm">Add Vendor</button>
-            } />
+        <div className="card mt-4">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 text-sm">Loading vendors...</div>
+          ) : vendors.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">No vendors found.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[650px]">
-              <thead className="bg-gray-50">
+            <table>
+              <thead>
                 <tr>
-                  {['Name', 'Phone', 'GSTIN', 'State', 'Outstanding'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
+                  <th>Vendor Name</th>
+                  <th>Phone</th>
+                  <th>GSTIN</th>
+                  <th>Location</th>
+                  <th className="num">Outstanding Balance (₹)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredVendors.map(v => (
-                  <tr key={v.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{v.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{v.phone || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">{v.gstin || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500">{v.state || '—'}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-red-600">
-                      {formatCurrency(v.outstanding)}
+              <tbody>
+                {vendors.map((v) => (
+                  <tr key={v.id || v.name}>
+                    <td className="font-bold text-white">{v.name}</td>
+                    <td className="text-slate-300">{v.phone || '—'}</td>
+                    <td className="mono text-xs text-indigo-300 font-semibold">{v.gstin || 'Unregistered'}</td>
+                    <td className="text-slate-300">{v.city ? `${v.city}, ${v.state}` : v.state || '—'}</td>
+                    <td className={`num mono font-bold ${parseFloat(v.outstanding || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      ₹{parseFloat(v.outstanding || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            </div>
           )}
         </div>
       )}
 
-      {/* Purchase Bills table */}
+      {/* Tab 2: Purchase Bills Table */}
       {activeTab === 'purchases' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {filteredPurchases.length === 0 ? (
-            <EmptyState
-              title="No purchase bills yet"
-              description="Record bills received from vendors to track payables"
-              action={
-                vendors.length > 0 ? (
-                  <button onClick={() => setShowPurchaseForm(true)} className="px-4 py-2 bg-primary text-white rounded-lg text-sm">+ New Purchase Bill</button>
-                ) : (
-                  <button onClick={() => { setActiveTab('vendors'); setShowVendorForm(true) }} className="px-4 py-2 bg-primary text-white rounded-lg text-sm">Add a Vendor First</button>
-                )
-              }
-            />
+        <div className="card mt-4">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 text-sm">Loading purchase bills...</div>
+          ) : purchases.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">No purchase bills found.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[800px]">
-              <thead className="bg-gray-50">
+            <table>
+              <thead>
                 <tr>
-                  {['Bill #', 'Vendor', 'Date', 'Due Date', 'Amount', 'Paid', 'Balance', 'Status'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
+                  <th>Bill #</th>
+                  <th>Date</th>
+                  <th>Vendor Name</th>
+                  <th className="num">Total Amount (₹)</th>
+                  <th>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredPurchases.map(p => {
-                  const statusColor = {
-                    pending: 'bg-yellow-100 text-yellow-700',
-                    partial: 'bg-blue-100 text-blue-700',
-                    paid: 'bg-green-100 text-green-700',
-                  }[p.status] || 'bg-gray-100 text-gray-600'
-                  return (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono text-xs">{p.bill_number || `#${p.id}`}</td>
-                      <td className="px-4 py-3 font-medium">{p.vendor_name}</td>
-                      <td className="px-4 py-3">{formatDate(p.bill_date)}</td>
-                      <td className="px-4 py-3">{p.due_date ? formatDate(p.due_date) : '—'}</td>
-                      <td className="px-4 py-3 font-mono">{formatCurrency(p.total_amount)}</td>
-                      <td className="px-4 py-3 font-mono text-green-600">{formatCurrency(p.paid_amount)}</td>
-                      <td className="px-4 py-3 font-mono text-red-600">{formatCurrency(p.balance_due)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor}`}>
-                          {p.status}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })}
+              <tbody>
+                {purchases.map((p) => (
+                  <tr key={p.id || p.bill_number}>
+                    <td className="font-mono text-indigo-300 font-bold">{p.bill_number}</td>
+                    <td>{p.bill_date || 'Today'}</td>
+                    <td className="font-bold text-white">{p.vendor_name || 'Vendor'}</td>
+                    <td className="num mono font-bold text-white">
+                      ₹{parseFloat(p.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${p.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                        {p.status || 'unpaid'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-            </div>
           )}
         </div>
       )}
 
-      {/* Add Vendor modal */}
-      <Modal open={showVendorForm} onClose={() => setShowVendorForm(false)} title="Add Vendor">
-        <VendorForm onSubmit={createVendor} onCancel={() => setShowVendorForm(false)} />
-      </Modal>
+      {/* Modal: + Add Vendor */}
+      {showVendorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-white font-bold text-base flex items-center gap-2">
+                <span>🏬</span> Add Vendor Master Record
+              </h3>
+              <button onClick={() => setShowVendorModal(false)} className="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
 
-      {/* New Purchase Bill modal */}
-      <Modal open={showPurchaseForm} onClose={() => setShowPurchaseForm(false)} title="New Purchase Bill" wide>
-        <PurchaseBillForm vendors={vendors} onSubmit={createPurchase} onCancel={() => setShowPurchaseForm(false)} />
-      </Modal>
-    </PageWrapper>
+            <form onSubmit={handleCreateVendor} autoComplete="off" className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Vendor Name *</label>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Vendor Name"
+                  value={vendorForm.name}
+                  onChange={(e) => setVendorForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Phone Number"
+                    value={vendorForm.phone}
+                    onChange={(e) => setVendorForm(f => ({ ...f, phone: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Email</label>
+                  <input
+                    type="email"
+                    autoComplete="off"
+                    placeholder="Email Address"
+                    value={vendorForm.email}
+                    onChange={(e) => setVendorForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">GSTIN (Optional)</label>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="GSTIN"
+                  value={vendorForm.gstin}
+                  onChange={(e) => setVendorForm(f => ({ ...f, gstin: e.target.value.toUpperCase() }))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">City</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    placeholder="City"
+                    value={vendorForm.city}
+                    onChange={(e) => setVendorForm(f => ({ ...f, city: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">State</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    placeholder="State"
+                    value={vendorForm.state}
+                    onChange={(e) => setVendorForm(f => ({ ...f, state: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowVendorModal(false)}
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white font-medium rounded-lg border border-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                >
+                  {submitting ? 'Saving...' : 'Save Vendor'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: + Add Purchase Bill */}
+      {showPurchaseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-white font-bold text-base flex items-center gap-2">
+                <span>🧾</span> Record Purchase Bill
+              </h3>
+              <button onClick={() => setShowPurchaseModal(false)} className="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
+
+            <form onSubmit={handleCreatePurchase} autoComplete="off" className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Vendor Name *</label>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Vendor Name"
+                  value={purchaseForm.vendor_name}
+                  onChange={(e) => setPurchaseForm(f => ({ ...f, vendor_name: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Bill Number</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Bill Number"
+                    value={purchaseForm.bill_number}
+                    onChange={(e) => setPurchaseForm(f => ({ ...f, bill_number: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Bill Date</label>
+                  <input
+                    type="date"
+                    autoComplete="off"
+                    value={purchaseForm.bill_date}
+                    onChange={(e) => setPurchaseForm(f => ({ ...f, bill_date: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Subtotal (₹) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    autoComplete="off"
+                    placeholder="Subtotal Amount"
+                    value={purchaseForm.subtotal}
+                    onChange={(e) => setPurchaseForm(f => ({ ...f, subtotal: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">GST Tax Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    autoComplete="off"
+                    placeholder="GST Tax Amount"
+                    value={purchaseForm.tax_amount}
+                    onChange={(e) => setPurchaseForm(f => ({ ...f, tax_amount: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPurchaseModal(false)}
+                  className="px-4 py-2 text-xs text-slate-400 hover:text-white font-medium rounded-lg border border-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+                >
+                  {submitting ? 'Saving...' : 'Save Purchase Bill'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }

@@ -36,10 +36,14 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     financial_year: Optional[str] = None
     currency: Optional[str] = None
+    role: Optional[str] = "admin"
+    parent_id: Optional[int] = None
+    has_org_pass: Optional[bool] = False
     created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
 
 
 class TokenResponse(BaseModel):

@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "================================="
-echo "   TallAI - AI Accounting App"
+echo "   FRIDAY - AI Accounting & Risk Scanner"
 echo "================================="
 
 echo "[1/2] Starting Backend..."
@@ -14,7 +14,7 @@ npm run dev &
 sleep 4
 
 echo ""
-echo "TallAI is running!"
+echo "FRIDAY is running!"
 echo "Backend API:  http://localhost:8000"
 echo "Frontend App: http://localhost:5173"
-echo "Login with: demo@tallai.com / demo123"
+echo "Register a new account or sign in with your credentials to get started."

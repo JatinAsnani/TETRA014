@@ -1,0 +1,9 @@
+invoice_number,invoice_date,vendor_name,vendor_gstin,taxable_value,tax_amount,total_amount,status,risk_scenario_notes
+INV-2026-001,2026-07-20,Tata Steel Ltd,27AAACT2727Q1ZW,120000.00,21600.00,141600.00,EXTRACTED,Clean Invoice (100% Match with Purchase Ledger)
+INV-2026-002,2026-07-22,Office Supplies Co,24ABCDE1234F1Z5,15000.00,2700.00,17700.00,EXTRACTED,Clean Invoice (Verified Payment Receipt)
+INV-2291,2026-07-15,Shree Traders,24AAACS8819R1Z2,40000.00,5000.00,45000.00,EXTRACTED,DUPLICATE INVOICE: Previously processed in ledger on 2026-07-02
+ST-8819,2026-07-18,Shree Traders,24AAACS8819R1Z2,40000.00,5000.00,45000.00,EXTRACTED,AMOUNT MISMATCH: Invoice total is 45000 but Ledger records 42500
+BILL-9041,2026-07-10,Raj Hardware & Tools,24INVALID999X,28000.00,5040.00,33040.00,EXTRACTED,INVALID GSTIN FORMAT: Fails standard 15-character GSTIN checksum
+INV-1092,2026-07-25,Local Cement Depot,,65000.00,11700.00,76700.00,EXTRACTED,MISSING INFORMATION: Vendor GSTIN field is blank on the document
+TEX-5510,2026-06-30,Gujarat Polytex,24AAACG9910F1ZP,85000.00,15300.00,100300.00,EXTRACTED,UNRESOLVED INCONSISTENCY: 18-day gap between invoice date and ledger posting
+EXP-9901,2026-07-28,Apex Logistics Ltd,27AAACA4421H1Z9,250000.00,45000.00,295000.00,EXTRACTED,UNRESOLVED INCONSISTENCY: Invoice total 295000 is 4.2x higher than historical avg

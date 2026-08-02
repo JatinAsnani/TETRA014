@@ -12,11 +12,14 @@ import models
 router = APIRouter()
 
 
+@router.get("/summary")
 @router.get("/stats")
 def dashboard_stats(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    from deps import get_org_id
+    org_id = get_org_id(user, db)
     today = date.today()
     month_start = today.replace(day=1)
     last_month_start = (month_start - timedelta(days=1)).replace(day=1)
@@ -26,7 +29,7 @@ def dashboard_stats(
         return float(
             db.query(func.coalesce(func.sum(amount_field), 0))
             .filter(
-                getattr(model, "user_id") == user.id,
+                getattr(model, "user_id") == org_id,
                 date_field >= start,
                 date_field <= end,
             )
@@ -40,30 +43,30 @@ def dashboard_stats(
 
     receivable = float(
         db.query(func.coalesce(func.sum(models.Customer.outstanding), 0))
-        .filter(models.Customer.user_id == user.id).scalar() or 0
+        .filter(models.Customer.user_id == org_id).scalar() or 0
     )
     payable = float(
         db.query(func.coalesce(func.sum(models.Vendor.outstanding), 0))
-        .filter(models.Vendor.user_id == user.id).scalar() or 0
+        .filter(models.Vendor.user_id == org_id).scalar() or 0
     )
 
-    pl = get_pl_report(db, user.id, month_start, today)
-    gst = get_gst_summary(db, user.id, today.month, today.year)
+    pl = get_pl_report(db, org_id, month_start, today)
+    gst = get_gst_summary(db, org_id, today.month, today.year)
     deadlines = get_next_deadlines()
 
     invoice_today = db.query(models.Invoice).filter(
-        models.Invoice.user_id == user.id,
+        models.Invoice.user_id == org_id,
         models.Invoice.invoice_date == today,
         models.Invoice.is_deleted == False,
     ).count()
 
     low_stock = db.query(models.StockItem).filter(
-        models.StockItem.user_id == user.id,
+        models.StockItem.user_id == org_id,
         models.StockItem.current_stock < models.StockItem.min_stock,
     ).count()
 
     overdue = db.query(models.Invoice).filter(
-        models.Invoice.user_id == user.id,
+        models.Invoice.user_id == org_id,
         models.Invoice.is_deleted == False,
         models.Invoice.due_date < today,
         models.Invoice.balance_due > 0,
@@ -72,6 +75,11 @@ def dashboard_stats(
     sales_change = round(((sales_this - sales_last) / sales_last * 100) if sales_last > 0 else 0, 1)
 
     return {
+        "sales": round(sales_this, 2),
+        "expenses": round(expenses_this, 2),
+        "receivable": round(receivable, 2),
+        "net_profit": pl["net_profit"],
+        "overdue_count": overdue,
         "total_sales_this_month": round(sales_this, 2),
         "total_purchases_this_month": round(purchases_this, 2),
         "total_expenses_this_month": round(expenses_this, 2),
