@@ -76,9 +76,9 @@ export default function InvoiceRiskScanner() {
                   Classification Intelligence
                 </span>
               </div>
-              <h1 className="text-white font-black text-2xl tracking-tight">Invoice Risk & Anomaly Scanner</h1>
-              <p className="text-slate-200 text-xs mt-1 max-w-2xl leading-relaxed font-medium">
-                AI-powered screening tool for MSMEs and audit teams. Automatically extracts invoice fields, reconciles against ledger entries & GSTIN master records, and classifies issues into Verified Mismatches, Unresolved Inconsistencies, or Missing Info.
+              <h1 className="font-black text-2xl tracking-tight" style={{ color: '#FFFFFF' }}>Invoice Risk &amp; Anomaly Scanner</h1>
+              <p className="text-xs mt-1 max-w-2xl leading-relaxed font-medium" style={{ color: '#E2E8F0' }}>
+                AI-powered screening tool for MSMEs and audit teams. Automatically extracts invoice fields, reconciles against ledger entries &amp; GSTIN master records, and classifies issues into Verified Mismatches, Unresolved Inconsistencies, or Missing Info.
               </p>
             </div>
 
@@ -88,10 +88,11 @@ export default function InvoiceRiskScanner() {
                 onClick={handleSeedSynthetic}
                 disabled={seeding}
                 className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/40 flex items-center justify-center gap-1.5 disabled:opacity-50 border border-indigo-400/30"
+                style={{ color: '#FFFFFF' }}
               >
                 <span>⚡</span> {seeding ? 'Loading Dataset...' : 'Load Synthetic Test Dataset'}
               </button>
-              <div className="flex items-center justify-center gap-1.5 bg-slate-900/80 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs text-slate-200 font-bold">
+              <div className="flex items-center justify-center gap-1.5 bg-slate-900/80 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-bold" style={{ color: '#F1F5F9' }}>
                 <span>🤖</span> Gemini Vision AI Active
               </div>
             </div>
