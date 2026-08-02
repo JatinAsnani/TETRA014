@@ -51,49 +51,49 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
 
       {/* KPI Stats Overview Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div className="risk-scanner-card bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Total Scanned Flags</div>
-            <div className="text-white font-black text-2xl mt-1">{totalCount}</div>
+            <div className="risk-scanner-text-main text-white font-black text-2xl mt-1">{totalCount}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 text-lg">
             🛡️
           </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div className="risk-scanner-card bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-rose-400 text-[11px] font-bold uppercase tracking-wider">Verified Mismatches</div>
-            <div className="text-rose-400 font-black text-2xl mt-1">{verifiedCount}</div>
+            <div className="text-rose-500 text-[11px] font-bold uppercase tracking-wider">Verified Mismatches</div>
+            <div className="text-rose-500 font-black text-2xl mt-1">{verifiedCount}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 text-lg">
             🚨
           </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div className="risk-scanner-card bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-amber-400 text-[11px] font-bold uppercase tracking-wider">Inconsistencies</div>
-            <div className="text-amber-400 font-black text-2xl mt-1">{unresolvedCount}</div>
+            <div className="text-amber-500 text-[11px] font-bold uppercase tracking-wider">Inconsistencies</div>
+            <div className="text-amber-500 font-black text-2xl mt-1">{unresolvedCount}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 text-lg">
             ⚠️
           </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div className="risk-scanner-card bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Flagged Exposure</div>
-            <div className="text-emerald-400 font-black text-xl font-mono mt-1">₹{totalExposure.toLocaleString('en-IN')}</div>
+            <div className="text-emerald-500 font-black text-xl font-mono mt-1">₹{totalExposure.toLocaleString('en-IN')}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-lg">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 text-lg">
             💰
           </div>
         </div>
       </div>
 
       {/* Filters & Search Control Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 shadow-md">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 risk-scanner-card bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 shadow-md">
         
         {/* Classification Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
@@ -109,7 +109,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
               className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 classificationFilter === tab.key
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/60'
+                  : 'text-slate-400 hover:text-indigo-500 hover:bg-slate-700/40'
               }`}
             >
               {tab.label}
@@ -126,7 +126,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
               placeholder="Search Invoices or Vendors"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 shadow-inner"
+              className="w-full risk-scanner-subpanel bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs risk-scanner-text-main placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-inner"
             />
             <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
           </form>
@@ -134,7 +134,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner"
+            className="risk-scanner-subpanel bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs risk-scanner-text-main focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner"
           >
             <option value="risk_score_desc">Highest Risk First</option>
             <option value="risk_score_asc">Lowest Risk First</option>
@@ -150,9 +150,9 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
           Analyzing ledger & OCR anomalies...
         </div>
       ) : exceptions.length === 0 ? (
-        <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-12 text-center shadow-lg">
+        <div className="risk-scanner-card bg-slate-800/40 border border-slate-700/60 rounded-2xl p-12 text-center shadow-lg">
           <div className="text-4xl mb-3">🎉</div>
-          <h3 className="text-white font-bold text-lg">No Exception Flags Found</h3>
+          <h3 className="risk-scanner-text-main font-bold text-lg">No Exception Flags Found</h3>
           <p className="text-slate-400 text-xs mt-1 max-w-md mx-auto">
             All checked invoices have verified GSTIN numbers and match purchase ledger entries cleanly.
           </p>
@@ -173,7 +173,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
               <div
                 key={exc.exception_id}
                 onClick={() => onSelectException(exc)}
-                className={`bg-slate-800/70 hover:bg-slate-800 border ${leftBorder} transition-all duration-200 rounded-2xl p-5 cursor-pointer group shadow-md hover:shadow-xl hover:-translate-y-0.5 ${
+                className={`risk-scanner-question bg-slate-800/70 hover:bg-slate-800 border ${leftBorder} transition-all duration-200 rounded-2xl p-5 cursor-pointer group shadow-md hover:shadow-xl hover:-translate-y-0.5 ${
                   exc.resolved 
                     ? 'border-slate-700/50 opacity-70' 
                     : 'border-slate-700/80 hover:border-indigo-500/50'
@@ -185,22 +185,22 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <ClassificationBadge classification={exc.classification} />
-                      <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                      <span className="text-xs font-mono font-bold text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                         #{exc.invoice_number}
                       </span>
                       {exc.resolved && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 flex items-center gap-1">
                           ✓ Audit Resolved
                         </span>
                       )}
                     </div>
 
-                    <h4 className="text-white font-black text-base group-hover:text-indigo-300 transition-colors flex items-center gap-2">
+                    <h4 className="risk-scanner-text-main font-black text-base group-hover:text-indigo-500 transition-colors flex items-center gap-2">
                       <span>{exc.vendor_name}</span>
-                      <span className="text-xs text-slate-500 group-hover:translate-x-1 transition-transform">→</span>
+                      <span className="text-xs text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
                     </h4>
 
-                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
+                    <p className="text-xs risk-scanner-text-muted text-slate-300 leading-relaxed line-clamp-2">
                       {exc.description}
                     </p>
                   </div>
@@ -208,7 +208,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
                   {/* Right Column */}
                   <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 border-slate-700/60 pt-3 md:pt-0">
                     <div className="text-right">
-                      <div className="text-white font-black text-lg font-mono tracking-tight">
+                      <div className="risk-scanner-text-main font-black text-lg font-mono tracking-tight">
                         ₹{exc.total_amount.toLocaleString('en-IN')}
                       </div>
                       <div className="text-[11px] text-slate-400 font-medium">Scanned Invoice Total</div>

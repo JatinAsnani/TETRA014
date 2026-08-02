@@ -61,7 +61,7 @@ export default function InvoiceRiskScanner() {
       <div className="space-y-6">
         
         {/* Module Header Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 border border-slate-700/80 rounded-2xl p-6 shadow-xl relative overflow-hidden text-white">
           <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 opacity-10 pointer-events-none text-9xl">
             🛡️
           </div>
@@ -69,15 +69,15 @@ export default function InvoiceRiskScanner() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider">
                   TetraTHON 2026 — Track C
                 </span>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/30 text-amber-200 border border-amber-400/30 uppercase tracking-wider">
                   Classification Intelligence
                 </span>
               </div>
               <h1 className="text-white font-black text-2xl tracking-tight">Invoice Risk & Anomaly Scanner</h1>
-              <p className="text-slate-300 text-xs mt-1 max-w-2xl leading-relaxed">
+              <p className="text-slate-200 text-xs mt-1 max-w-2xl leading-relaxed font-medium">
                 AI-powered screening tool for MSMEs and audit teams. Automatically extracts invoice fields, reconciles against ledger entries & GSTIN master records, and classifies issues into Verified Mismatches, Unresolved Inconsistencies, or Missing Info.
               </p>
             </div>
@@ -87,11 +87,11 @@ export default function InvoiceRiskScanner() {
               <button 
                 onClick={handleSeedSynthetic}
                 disabled={seeding}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-indigo-600/40 flex items-center justify-center gap-1.5 disabled:opacity-50 border border-indigo-400/30"
               >
                 <span>⚡</span> {seeding ? 'Loading Dataset...' : 'Load Synthetic Test Dataset'}
               </button>
-              <div className="flex items-center justify-center gap-1.5 bg-slate-900/80 border border-slate-700 px-3 py-2 rounded-xl text-xs text-slate-300 font-medium">
+              <div className="flex items-center justify-center gap-1.5 bg-slate-900/80 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs text-slate-200 font-bold">
                 <span>🤖</span> Gemini Vision AI Active
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function InvoiceRiskScanner() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex flex-wrap items-center border-b border-slate-700/80 gap-2 pb-1">
+        <div className="flex flex-wrap items-center border-b border-slate-700/60 gap-2 pb-1">
           {[
             { id: 'upload', label: 'Upload & Reconcile', icon: '📄' },
             { id: 'exceptions', label: 'Exception Dashboard', icon: '🚨' },
@@ -111,10 +111,10 @@ export default function InvoiceRiskScanner() {
                 setActiveTab(tab.id)
                 setReconcileSuccessMsg(null)
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-lg transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all ${
                 activeTab === tab.id
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                  : 'risk-scanner-card bg-slate-800/80 text-slate-400 hover:text-indigo-500 hover:bg-slate-700/60 border border-slate-700/60'
               }`}
             >
               <span className="text-sm">{tab.icon}</span>

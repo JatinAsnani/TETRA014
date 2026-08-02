@@ -100,30 +100,30 @@ export default function UploadPanel({ onInvoiceExtracted }) {
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+        className={`risk-scanner-card border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
           dragActive 
             ? 'border-indigo-500 bg-indigo-500/10' 
-            : 'border-slate-700 bg-slate-800/40 hover:border-slate-600 hover:bg-slate-800/60'
+            : 'border-slate-700/80 bg-slate-800/40 hover:border-indigo-500/50 hover:bg-slate-800/60 shadow-lg'
         }`}
       >
         {loading ? (
-          <div className="py-8 flex flex-col items-center justify-center space-y-3">
+          <div className="py-10 flex flex-col items-center justify-center space-y-3">
             <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-300 font-medium">Extracting invoice fields with Gemini AI...</p>
-            <p className="text-slate-500 text-xs">Parsing document layout, vendor GSTIN, totals & line items</p>
+            <p className="risk-scanner-text-main font-bold">Extracting invoice fields with Gemini AI...</p>
+            <p className="text-slate-400 text-xs">Parsing document layout, vendor GSTIN, totals & line items</p>
           </div>
         ) : (
-          <div className="py-4 flex flex-col items-center justify-center space-y-3">
-            <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-2xl mb-1">
+          <div className="py-6 flex flex-col items-center justify-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 text-3xl mb-1 shadow-inner">
               📄
             </div>
             <div>
-              <h3 className="text-white font-semibold text-base">Drag & Drop Invoice Document</h3>
+              <h3 className="risk-scanner-text-main font-bold text-lg">Drag & Drop Invoice Document</h3>
               <p className="text-slate-400 text-xs mt-1">Supports PDF, JPG/PNG, Excel (.xls/.xlsx), CSV, Word (.doc/.docx)</p>
             </div>
             
-            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition-colors">
-              Browse Local File
+            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 mt-2">
+              <span>📁</span> Browse Local File
               <input 
                 type="file" 
                 className="hidden" 
