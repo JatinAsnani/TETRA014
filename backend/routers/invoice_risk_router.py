@@ -36,21 +36,63 @@ class ResolvePayload(BaseModel):
     resolution_note: Optional[str] = "Resolved after audit review."
 
 
-def _get_user_scanned(user_id: int) -> List[Dict[str, Any]]:
+def _get_user_scanned(user_id: int, db: Session = None) -> List[Dict[str, Any]]:
+    if db is not None:
+        try:
+            import json
+            sc_rows = db.query(models.ScannedInvoice).filter(models.ScannedInvoice.user_id == user_id).all()
+            if sc_rows:
+                res = []
+                for r in sc_rows:
+                    items = []
+                    if r.line_items:
+                        try:
+                            items = json.loads(r.line_items)
+                        except Exception:
+                            items = []
+                    res.append({
+                        "scanned_invoice_id": r.scanned_invoice_id,
+                        "invoice_number": r.invoice_number,
+                        "invoice_date": r.invoice_date,
+                        "vendor_name": r.vendor_name,
+                        "vendor_gstin": r.vendor_gstin,
+                        "taxable_value": float(r.taxable_value or 0.0),
+                        "tax_amount": float(r.tax_amount or 0.0),
+                        "total_amount": float(r.total_amount or 0.0),
+                        "file_name": r.file_name,
+                        "notes": r.notes,
+                        "line_items": items,
+                        "status": r.status
+                    })
+                return res
+        except Exception as e:
+            print(f"[ScannedInvoice DB Fetch Note] {e}")
+
     if user_id not in _scanned_invoices_db:
         _scanned_invoices_db[user_id] = []
     return _scanned_invoices_db[user_id]
 
 
-def _get_resolved_ids(user_id: int) -> set:
-    if user_id not in _user_resolved_exceptions:
-        _user_resolved_exceptions[user_id] = set()
-    return _user_resolved_exceptions[user_id]
+def _get_resolved_ids(user_id: int, db: Session = None) -> set:
+    resolved_set = set()
+    if user_id in _user_resolved_exceptions:
+        resolved_set.update(_user_resolved_exceptions[user_id])
+    if db is not None:
+        try:
+            db_rows = db.query(models.AuditException).filter(
+                models.AuditException.user_id == user_id,
+                models.AuditException.resolved == True
+            ).all()
+            for r in db_rows:
+                resolved_set.add(r.exception_id)
+        except Exception as e:
+            print(f"[AuditException DB Fetch Note] {e}")
+    return resolved_set
 
 
 def _build_db_exceptions(user_id: int, db: Session) -> List[Dict[str, Any]]:
     """Scan database and session scanned invoices for all risk types and discrepancies."""
-    resolved_ids = _get_resolved_ids(user_id)
+    resolved_ids = _get_resolved_ids(user_id, db)
     exceptions = []
 
     # 1. Vendor Master GSTIN Verification (Database Vendors)
@@ -750,10 +792,35 @@ def seed_synthetic_dataset(
 
     for item in synthetic_samples:
         scanned_list.append(item)
+        existing = db.query(models.ScannedInvoice).filter(
+            models.ScannedInvoice.user_id == org_id,
+            models.ScannedInvoice.scanned_invoice_id == item["scanned_invoice_id"]
+        ).first()
+        if not existing:
+            from decimal import Decimal
+            db.add(models.ScannedInvoice(
+                user_id=org_id,
+                scanned_invoice_id=item["scanned_invoice_id"],
+                invoice_number=item["invoice_number"],
+                invoice_date=item["invoice_date"],
+                vendor_name=item["vendor_name"],
+                vendor_gstin=item["vendor_gstin"],
+                taxable_value=Decimal(str(item["taxable_value"])),
+                tax_amount=Decimal(str(item["tax_amount"])),
+                total_amount=Decimal(str(item["total_amount"])),
+                file_name=item["file_name"],
+                notes=item["notes"],
+                status="SCANNED"
+            ))
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Seed ScannedInvoice DB Note] {e}")
 
     return {
         "status": "success",
-        "message": "Loaded 5 predefined synthetic MSME test invoices with accounting exceptions into Risk Scanner session.",
+        "message": "Loaded 5 predefined synthetic MSME test invoices with accounting exceptions into Risk Scanner database.",
         "added_count": len(synthetic_samples)
     }
 
