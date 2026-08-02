@@ -18,13 +18,13 @@ def get_mongo_uri() -> str:
     """Retrieve MongoDB Atlas connection string from environment."""
     return os.getenv(
         "MONGODB_URI",
-        "mongodb+srv://demo:demo123@cluster0.mongodb.net/friday?retryWrites=true&w=majority"
+        "mongodb+srv://jatinasnani03_db_user:EOcQK8kjBycePKX2@friday.zykyjos.mongodb.net/tallai?retryWrites=true&w=majority&appName=friday"
     ).strip()
 
 
 def get_mongo_db_name() -> str:
     """Retrieve target MongoDB database name."""
-    return os.getenv("MONGODB_DB_NAME", "friday").strip()
+    return os.getenv("MONGODB_DB_NAME", "tallai").strip()
 
 
 def get_mongo_client():
