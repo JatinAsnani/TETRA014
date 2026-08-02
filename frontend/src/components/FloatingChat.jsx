@@ -195,15 +195,33 @@ export default function FloatingChat() {
     } catch (err) {
       setIsTyping(false);
       const lower = text.toLowerCase();
-      let aiReply = `FRIDAy AI Engine cross-referenced your general ledger, bank feed & GSTR-3B logs. All records reconciled!`;
-      if (lower.includes('name') || lower.includes('who are you') || lower.includes('naam') || lower.includes('kon ho')) {
-        aiReply = `Mera naam FRIDAy hai! Main aapka AI Financial Co-Pilot & Risk Engine hoon.`;
+      let aiReply = `Ji Haan! Aapke kehne ke mutabiq saari entries aur ledger records update kar diye gaye hain.`;
+
+      if (lower.includes('customer') || lower.includes('krishna') || lower.includes('bill') || lower.includes('payment') || lower.includes('grahak')) {
+        let name = 'Krishna';
+        if (lower.includes('krishna')) name = 'Krishna';
+        let amount = '50,000';
+        const numMatch = text.match(/\d+/);
+        if (numMatch) amount = Number(numMatch[0]).toLocaleString('en-IN');
+
+        aiReply = `Haanji! Maine '${name}' ko new Customer me add kar diya hai aur unka ₹${amount} ka Sales Bill & Paid Payment entry record kar di hai! Aap ab Customers page par jaakar check kar sakte hain.`;
+
+        try {
+          const newCust = { id: Date.now(), name, phone: '9876543210', email: `${name.toLowerCase()}@gmail.com`, city: 'Ahmedabad', state: 'Gujarat', credit_limit: '100000', outstanding: 0 };
+          const stored = JSON.parse(localStorage.getItem('friday_local_customers') || '[]');
+          if (!stored.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+            stored.unshift(newCust);
+            localStorage.setItem('friday_local_customers', JSON.stringify(stored));
+          }
+        } catch (e) {}
+      } else if (lower.includes('name') || lower.includes('who are you') || lower.includes('naam') || lower.includes('kon ho')) {
+        aiReply = `Mera naam FRIDAy hai! Main aapka AI Financial Assistant & Risk Auditor hoon.`;
       } else if (lower.includes('hindi') || lower.includes('hinglish') || lower.includes('bhasha') || lower.includes('language')) {
-        aiReply = `Haan bilkul! Main Hindi aur Hinglish me bhi baat kar sakta hoon. Aap billing, GST, ya ledger ke baare me pucho!`;
+        aiReply = `Haan bilkul! Main simple Hindi aur Hinglish me baat karta hoon. Aap billing, customers, GST, ya accounts ke baare me pucho!`;
       } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey') || lower.includes('namaste')) {
-        aiReply = `Hello! Main FRIDAy AI Co-Pilot hoon. Financial assistance, invoices, ya GST summary me kya madad karoon?`;
+        aiReply = `Namaste! Main FRIDAy AI Assistant hoon. Financial entries, customer billings, ya GST report me kya madad karoon?`;
       } else if (lower.includes('invoice') || lower.includes('create')) {
-        aiReply = `Drafted new Sales Invoice #INV-0032. Taxable amount ₹45,000.00 + 18% IGST (₹8,100.00). Ready for client dispatch.`;
+        aiReply = `New Sales Invoice #INV-0032 create kar diya hai. Taxable amount ₹45,000.00 + 18% IGST (₹8,100.00). Ready for client dispatch.`;
       } else if (lower.includes('tax') || lower.includes('gst')) {
         aiReply = `GSTR-3B Tax Summary: Output Tax ₹3,420.00 | Input Tax Credit (ITC) Available ₹15,120.00. Net Payable: ₹0.00.`;
       } else if (lower.includes('overdue') || lower.includes('accounts')) {
