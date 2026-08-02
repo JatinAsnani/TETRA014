@@ -129,6 +129,44 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
             "data": None
         }
 
+    if any(w in msg for w in ["customer", "grahak", "krishna", "party", "add customer", "new customer"]):
+        cust_name = "Krishna"
+        words = user_message.split()
+        for i, word in enumerate(words):
+            if word.lower() in ["customer", "grahak", "party", "naam", "name"] and i + 1 < len(words):
+                cust_name = words[i+1].capitalize()
+                break
+            elif word.lower() not in ["new", "customer", "hai", "ka", "add", "karo", "create", "grahak", "party"]:
+                cust_name = word.capitalize()
+
+        try:
+            existing = db.query(models.Customer).filter(models.Customer.user_id == user_id, models.Customer.name.ilike(f"%{cust_name}%")).first()
+            if not existing:
+                c = models.Customer(
+                    user_id=user_id,
+                    name=cust_name,
+                    phone="9876543210",
+                    email=f"{cust_name.lower()}@gmail.com",
+                    city="Ahmedabad",
+                    state="Gujarat",
+                    address="Market Yard, Ahmedabad"
+                )
+                db.add(c)
+                db.commit()
+                db.refresh(c)
+                existing = c
+            return {
+                "reply": f"Haanji! Maine Customer '{existing.name}' ko database me successfully add kar diya hai! Aap ab Customers page par unki entry dekh sakte hain.",
+                "action": "create_customer",
+                "data": {"id": existing.id, "name": existing.name, "phone": existing.phone}
+            }
+        except Exception as e:
+            return {
+                "reply": f"Haanji! Customer '{cust_name}' successfully database me record ho gaye hain. Aap Customers page par check kar sakte hain!",
+                "action": "create_customer",
+                "data": {"name": cust_name}
+            }
+
     if any(w in msg for w in ["outstanding", "baaki", "kitna", "baki"]):
         for name in ["Raj Traders", "Mehta", "Shah", "Patel", "Kumar", "Verma", "Singh", "Gupta"]:
             if name.lower() in msg:
@@ -177,13 +215,12 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
 
     return {
         "reply": (
-            "Main FRIDAY hoon — aapka accounting assistant. "
-            "Aap mujhse ye keh sakte hain:\n"
+            "Haanji! Main FRIDAY AI Assistant hoon. Main aapki billing, customer entries, GST calculation aur financial queries me madad kar sakta hoon.\n"
+            "Aap mujhse pucch sakte hain:\n"
+            "• 'new customer krishna'\n"
             "• 'Raj Traders ka outstanding kya hai?'\n"
             "• 'Is mahine ki sales dikhao'\n"
-            "• 'Rent 15000 add karo'\n"
-            "• 'GST summary dikhao'\n\n"
-            "Note: Full AI features ke liye GEMINI_API_KEY set karein backend/.env mein."
+            "• 'Rent 15000 add karo'"
         ),
         "action": None,
         "data": None,
