@@ -8,12 +8,34 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/invoices/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/purchases/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/invoice-risk/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/chat/(.*)",
       "dest": "backend/main.py"
     },
     {
