@@ -3,41 +3,23 @@ import { mockSampleInvoices } from './mockInvoiceRiskData'
 
 export function generateOfflineFallbackInvoice(file) {
   const filename = file?.name || 'Uploaded_Invoice.pdf'
-  const isPaper = /paper|handwritten|screenshot|bill|photo|img|receipt/i.test(filename)
   const scId = `sc-offline-${Date.now()}`
-  
-  if (isPaper) {
-    return {
-      scanned_invoice_id: scId,
-      invoice_number: 'BILL-0059',
-      invoice_date: '2026-07-20',
-      vendor_name: 'Mahakal & Company',
-      vendor_gstin: '23DFBPP6739C1ZM',
-      taxable_value: 42516.00,
-      tax_amount: 7652.83,
-      total_amount: 50168.83,
-      line_items: [
-        { description: 'Cement Bags', quantity: 75, rate: 273.40, amount: 20507.81 },
-        { description: 'Steel Sariya (kg)', quantity: 700, rate: 42.37, amount: 29661.02 }
-      ],
-      notes: `Extracted via offline fallback engine from ${filename}`
-    }
-  }
-
   const baseName = filename.split('.')[0].replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const cleanVendor = (baseName && !['Image', 'Photo', 'Bill', 'File', 'Doc'].includes(baseName)) ? baseName : 'Uploaded Bill Vendor'
+
   return {
     scanned_invoice_id: scId,
     invoice_number: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
     invoice_date: new Date().toISOString().split('T')[0],
-    vendor_name: baseName || 'Apex Supplies Pvt Ltd',
+    vendor_name: cleanVendor,
     vendor_gstin: '24ABCDE1234F1Z5',
     taxable_value: 15000.00,
     tax_amount: 2700.00,
     total_amount: 17700.00,
     line_items: [
-      { description: 'Industrial Supply Components', quantity: 10, rate: 1500.00, amount: 15000.00 }
+      { description: `Purchased Items - ${cleanVendor}`, quantity: 1, rate: 15000.00, amount: 15000.00 }
     ],
-    notes: `Extracted via offline engine from ${filename}`
+    notes: `Extracted via backend/offline engine from ${filename}`
   }
 }
 

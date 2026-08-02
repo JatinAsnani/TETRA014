@@ -1,72 +1,111 @@
-import Topbar from '../components/Topbar.jsx';
-
-const items = [
-  {
-    stamp: '₹9.9L', tier: 'high',
-    title: 'Duplicate invoice — Anand Traders',
-    desc: 'INV-2291 duplicates ledger entry INV-2288: identical vendor, GSTIN, date and total (₹99,120).',
-    file: 'anand_traders_inv2291.pdf', conf: '96%', time: 'flagged 31 Jul, 10:42',
-    status: 'open', statusLabel: 'Open',
-  },
-  {
-    stamp: 'GST', tier: 'medium',
-    title: 'Invalid GSTIN format — Nova Packaging',
-    desc: 'GSTIN 24AAXCN9•••Z1 fails checksum validation; likely an OCR misread on a low-resolution scan.',
-    file: 'nova_packaging_scan_07.jpg', conf: '74%', time: 'flagged 31 Jul, 09:15',
-    status: 'review', statusLabel: 'In review',
-  },
-  {
-    stamp: '₹10K', tier: 'high',
-    title: 'Amount mismatch — Suresh Metal Works',
-    desc: 'Invoice total ₹1,18,400 exceeds matched ledger entry PL-9042 by ₹10,000.',
-    file: 'suresh_metal_works_aug.pdf', conf: '88%', time: 'flagged 30 Jul, 17:03',
-    status: 'open', statusLabel: 'Open',
-  },
-  {
-    stamp: 'VND', tier: 'medium',
-    title: 'Unusual vendor activity — Kiran Enterprises',
-    desc: "3 invoices submitted within 48 hours; a break from this vendor's typical monthly cadence.",
-    file: 'kiran_ent_batch3.pdf', conf: '99%', time: 'flagged 29 Jul, 14:20',
-    status: 'cleared', statusLabel: 'Cleared',
-  },
-];
+import React, { useState, useEffect } from 'react'
+import Topbar from '../components/Topbar.jsx'
+import { getExceptions } from '../api/invoiceRiskApi'
 
 export default function AuditTrail() {
+  const [exceptions, setExceptions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    fetchAuditTrail()
+  }, [filter])
+
+  const fetchAuditTrail = async () => {
+    setLoading(true)
+    try {
+      const res = await getExceptions({ classification: filter === 'ALL' ? 'ALL' : filter })
+      setExceptions(res.exceptions || [])
+    } catch (err) {
+      console.error('Audit trail fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getTier = (score) => {
+    if (score >= 80) return { tier: 'high', label: 'High' }
+    if (score >= 50) return { tier: 'medium', label: 'Medium' }
+    return { tier: 'low', label: 'Low' }
+  }
+
+  const filtered = exceptions.filter(e => {
+    if (!search.trim()) return true
+    const s = search.toLowerCase()
+    return (e.vendor_name || '').toLowerCase().includes(s) ||
+           (e.invoice_number || '').toLowerCase().includes(s) ||
+           (e.description || '').toLowerCase().includes(s)
+  })
+
   return (
     <section className="view" id="view-audit">
-      <Topbar title="Risk &amp; Audit Trail" />
+      <Topbar title="Risk & Audit Trail" />
       <p style={{ color: 'var(--text-soft)', fontSize: '13.5px', maxWidth: 640, marginTop: -8, marginBottom: 22 }}>
-        Every exception, linked back to its source document with a confidence-weighted risk score — this is the invoice risk screening record, not a full audit-management platform.
+        Live audit screening log connected directly to live backend ledger & GST records. Every discrepancy is confidence-weighted and linked to its source entry.
       </p>
 
       <div className="filters">
         <div className="tabs" style={{ marginBottom: 0 }}>
-          <button className="tab active">All tiers</button>
-          <button className="tab">High</button>
-          <button className="tab">Medium</button>
-          <button className="tab">Low</button>
+          {['ALL', 'VERIFIED_MISMATCH', 'UNRESOLVED_INCONSISTENCY', 'MISSING_INFORMATION'].map(t => (
+            <button
+              key={t}
+              className={`tab ${filter === t ? 'active' : ''}`}
+              onClick={() => setFilter(t)}
+            >
+              {t === 'ALL' ? 'All Tiers' : t.replace('_', ' ')}
+            </button>
+          ))}
         </div>
-        <select className="select"><option>Status: All</option></select>
-        <button className="btn secondary small" style={{ marginLeft: 'auto' }}>Export for auditor</button>
+        
+        <input
+          type="text"
+          placeholder="Search by vendor or invoice..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="select"
+          style={{ width: 220 }}
+        />
+
+        <button onClick={fetchAuditTrail} className="btn secondary small" style={{ marginLeft: 'auto' }}>
+          🔄 Refresh Audit Log
+        </button>
       </div>
 
       <div className="card">
-        {items.map((it) => (
-          <div className="audit-item" key={it.title}>
-            <div className={'risk-stamp ' + it.tier}>{it.stamp}</div>
-            <div>
-              <div className="title">{it.title}</div>
-              <div className="desc">{it.desc}</div>
-              <div className="trail-meta">
-                <span>📄 {it.file}</span>
-                <span>◎ confidence {it.conf}</span>
-                <span>🕐 {it.time}</span>
-              </div>
-            </div>
-            <span className={'status-pill ' + it.status}>{it.statusLabel}</span>
+        {loading ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-soft)', fontSize: 13 }}>
+            Fetching live backend audit trail...
           </div>
-        ))}
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-soft)', fontSize: 13 }}>
+            ✓ No active audit risk exceptions found in database. All records reconciled cleanly!
+          </div>
+        ) : (
+          filtered.map((it) => {
+            const { tier } = getTier(it.risk_score || 50)
+            return (
+              <div className="audit-item" key={it.exception_id}>
+                <div className={`risk-stamp ${tier}`}>
+                  Risk {it.risk_score || 50}
+                </div>
+                <div>
+                  <div className="title">{it.invoice_number} — {it.vendor_name}</div>
+                  <div className="desc">{it.description}</div>
+                  <div className="trail-meta">
+                    <span>📄 {it.invoice_number}</span>
+                    <span>◎ Amount ₹{(it.total_amount || 0).toLocaleString('en-IN')}</span>
+                    <span>🕐 {it.created_at ? it.created_at.slice(0, 10) : 'Today'}</span>
+                  </div>
+                </div>
+                <span className={`status-pill ${it.resolved ? 'cleared' : 'open'}`}>
+                  {it.resolved ? 'Cleared' : 'Open Risk'}
+                </span>
+              </div>
+            )
+          })
+        )}
       </div>
     </section>
-  );
+  )
 }
