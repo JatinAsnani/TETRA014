@@ -21,7 +21,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
         search: search,
         sort_by: sortBy
       })
-      setExceptions(res.exceptions)
+      setExceptions(res.exceptions || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -37,13 +37,63 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
   const getRiskColor = (score) => {
     if (score >= 80) return 'text-rose-400 bg-rose-500/10 border-rose-500/30'
     if (score >= 60) return 'text-amber-400 bg-amber-500/10 border-amber-500/30'
-    return 'text-slate-400 bg-slate-500/10 border-slate-500/30'
+    return 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30'
   }
 
+  // Summary Metrics
+  const totalCount = exceptions.length
+  const verifiedCount = exceptions.filter(e => e.classification === 'VERIFIED_MISMATCH' && !e.resolved).length
+  const unresolvedCount = exceptions.filter(e => e.classification === 'UNRESOLVED_INCONSISTENCY' && !e.resolved).length
+  const totalExposure = exceptions.reduce((sum, e) => sum + (e.total_amount || 0), 0)
+
   return (
-    <div className="space-y-5">
-      {/* Header Filters & Search Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-800/60 p-4 rounded-xl border border-slate-700/80">
+    <div className="space-y-6">
+
+      {/* KPI Stats Overview Bar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Total Scanned Flags</div>
+            <div className="text-white font-black text-2xl mt-1">{totalCount}</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-lg">
+            🛡️
+          </div>
+        </div>
+
+        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-rose-400 text-[11px] font-bold uppercase tracking-wider">Verified Mismatches</div>
+            <div className="text-rose-400 font-black text-2xl mt-1">{verifiedCount}</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-lg">
+            🚨
+          </div>
+        </div>
+
+        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-amber-400 text-[11px] font-bold uppercase tracking-wider">Inconsistencies</div>
+            <div className="text-amber-400 font-black text-2xl mt-1">{unresolvedCount}</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg">
+            ⚠️
+          </div>
+        </div>
+
+        <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Flagged Exposure</div>
+            <div className="text-emerald-400 font-black text-xl font-mono mt-1">₹{totalExposure.toLocaleString('en-IN')}</div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-lg">
+            💰
+          </div>
+        </div>
+      </div>
+
+      {/* Filters & Search Control Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 shadow-md">
         
         {/* Classification Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
@@ -56,10 +106,10 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
             <button
               key={tab.key}
               onClick={() => setClassificationFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 classificationFilter === tab.key
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/60'
               }`}
             >
               {tab.label}
@@ -68,23 +118,23 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
         </div>
 
         {/* Search & Sort Controls */}
-        <div className="flex items-center gap-3">
-          <form onSubmit={handleSearchSubmit} autoComplete="off" className="relative flex-1 md:w-60">
+        <div className="flex items-center gap-2.5">
+          <form onSubmit={handleSearchSubmit} autoComplete="off" className="relative flex-1 md:w-64">
             <input
               type="text"
               autoComplete="off"
               placeholder="Search Invoices or Vendors"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 shadow-inner"
             />
-            <span className="absolute left-3 top-2 text-slate-500 text-xs">🔍</span>
+            <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
           </form>
 
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-inner"
           >
             <option value="risk_score_desc">Highest Risk First</option>
             <option value="risk_score_asc">Lowest Risk First</option>
@@ -93,73 +143,85 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
         </div>
       </div>
 
-      {/* Exception List Cards */}
+      {/* Exception Cards */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-sm">
-          <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-          Loading reconciliation exceptions...
+        <div className="py-16 text-center text-slate-400 text-sm">
+          <div className="w-9 h-9 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          Analyzing ledger & OCR anomalies...
         </div>
       ) : exceptions.length === 0 ? (
-        <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-10 text-center">
-          <div className="text-3xl mb-2">🎉</div>
-          <h3 className="text-white font-semibold text-base">No Exception Flags Found</h3>
-          <p className="text-slate-400 text-xs mt-1">All checked invoices have matching ledger records and verified GSTIN details.</p>
+        <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-12 text-center shadow-lg">
+          <div className="text-4xl mb-3">🎉</div>
+          <h3 className="text-white font-bold text-lg">No Exception Flags Found</h3>
+          <p className="text-slate-400 text-xs mt-1 max-w-md mx-auto">
+            All checked invoices have verified GSTIN numbers and match purchase ledger entries cleanly.
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {exceptions.map(exc => {
             const riskColor = getRiskColor(exc.risk_score)
+            const leftBorder = exc.resolved
+              ? 'border-l-4 border-l-emerald-500'
+              : exc.classification === 'VERIFIED_MISMATCH'
+              ? 'border-l-4 border-l-rose-500'
+              : exc.classification === 'UNRESOLVED_INCONSISTENCY'
+              ? 'border-l-4 border-l-amber-500'
+              : 'border-l-4 border-l-slate-500'
+
             return (
               <div
                 key={exc.exception_id}
                 onClick={() => onSelectException(exc)}
-                className={`bg-slate-800/70 hover:bg-slate-800 border transition-all rounded-xl p-4 cursor-pointer group ${
+                className={`bg-slate-800/70 hover:bg-slate-800 border ${leftBorder} transition-all duration-200 rounded-2xl p-5 cursor-pointer group shadow-md hover:shadow-xl hover:-translate-y-0.5 ${
                   exc.resolved 
-                    ? 'border-slate-700/50 opacity-60' 
-                    : 'border-slate-700 hover:border-indigo-500/60 shadow-lg hover:shadow-indigo-500/10'
+                    ? 'border-slate-700/50 opacity-70' 
+                    : 'border-slate-700/80 hover:border-indigo-500/50'
                 }`}
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   
-                  {/* Left Column: Classification, Vendor, Invoice # */}
-                  <div className="space-y-1.5 flex-1">
+                  {/* Left Column */}
+                  <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <ClassificationBadge classification={exc.classification} />
-                      <span className="text-xs font-mono font-semibold text-slate-300">
-                        {exc.invoice_number}
+                      <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                        #{exc.invoice_number}
                       </span>
                       {exc.resolved && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          ✓ Resolved
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                          ✓ Audit Resolved
                         </span>
                       )}
                     </div>
 
-                    <h4 className="text-white font-bold text-sm group-hover:text-indigo-300 transition-colors">
-                      {exc.vendor_name}
+                    <h4 className="text-white font-black text-base group-hover:text-indigo-300 transition-colors flex items-center gap-2">
+                      <span>{exc.vendor_name}</span>
+                      <span className="text-xs text-slate-500 group-hover:translate-x-1 transition-transform">→</span>
                     </h4>
 
-                    <p className="text-xs text-slate-400 line-clamp-2">
+                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
                       {exc.description}
                     </p>
                   </div>
 
-                  {/* Right Column: Risk Score & Amount */}
-                  <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 border-slate-700/60 pt-2 md:pt-0">
+                  {/* Right Column */}
+                  <div className="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 border-slate-700/60 pt-3 md:pt-0">
                     <div className="text-right">
-                      <div className="text-white font-bold text-sm font-mono">
+                      <div className="text-white font-black text-lg font-mono tracking-tight">
                         ₹{exc.total_amount.toLocaleString('en-IN')}
                       </div>
-                      <div className="text-[11px] text-slate-400">Invoice Total</div>
+                      <div className="text-[11px] text-slate-400 font-medium">Scanned Invoice Total</div>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] text-slate-400">Risk Score:</span>
-                      <span className={`px-2 py-0.5 rounded font-mono text-xs font-bold border ${riskColor}`}>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[11px] text-slate-400 font-medium">Risk Score:</span>
+                      <span className={`px-2.5 py-1 rounded-lg font-mono text-xs font-black border ${riskColor}`}>
                         {exc.risk_score}/100
                       </span>
                     </div>
                   </div>
+
                 </div>
               </div>
             )
