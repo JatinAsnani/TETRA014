@@ -61,15 +61,23 @@ export default function Ledger() {
       <Topbar title="General Ledger & Trial Balance" />
 
       {/* Tabs */}
-      <div className="tabs flex items-center gap-2 mb-4 border-b border-slate-700/80 pb-2">
+      <div className="tabs flex items-center gap-2.5 mb-4 border-b border-slate-300 dark:border-slate-700/80 pb-3">
         <button 
-          className={`tab px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all shadow-md ${
+            activeTab === 'accounts' 
+              ? 'bg-indigo-600 text-white shadow-indigo-600/30' 
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+          }`}
           onClick={() => setActiveTab('accounts')}
         >
           📖 Ledger Accounts
         </button>
         <button 
-          className={`tab px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'trial' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all shadow-md ${
+            activeTab === 'trial' 
+              ? 'bg-indigo-600 text-white shadow-indigo-600/30' 
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+          }`}
           onClick={() => setActiveTab('trial')}
         >
           ⚖️ Trial Balance
@@ -84,19 +92,19 @@ export default function Ledger() {
             <div className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700 pb-2">
               Select Account
             </div>
-            <div className="ilist space-y-1.5">
+            <div className="ilist space-y-2">
               {accounts.map((a) => (
                 <div 
                   key={a.name}
                   onClick={() => setSelectedAccount(a)}
-                  className={`irow cursor-pointer flex items-center justify-between p-3 rounded-xl border transition-all ${
+                  className={`irow cursor-pointer flex items-center justify-between px-4 py-3.5 my-1.5 rounded-xl border transition-all ${
                     selectedAccount?.name === a.name 
-                      ? 'bg-indigo-600/20 border-indigo-500/60 text-white shadow-md' 
-                      : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800/60'
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' 
+                      : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
-                  <div className="font-bold text-xs">{a.name}</div>
-                  <div className={`amt mono font-bold text-xs ${a.neg ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  <div className="font-bold text-sm">{a.name}</div>
+                  <div className={`amt mono font-bold text-xs ${selectedAccount?.name === a.name ? 'text-white' : a.neg ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     ₹{Math.abs(a.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
