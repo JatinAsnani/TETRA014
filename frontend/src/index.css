@@ -107,29 +107,6 @@
   --coral-soft:       var(--effects-color);
 
   color-scheme: light;
-/* ===== Comprehensive Light Mode Theme Conversion System ===== */
-[data-theme="light"] {
-  --bg-color:         #F8FAFC;
-  --primary-color:    #0284C7;
-  --effects-color:    rgba(2, 132, 199, 0.08);
-  --chatbot-primary-color: #0D9488;
-
-  --sidebar:          #FFFFFF;
-  --sidebar-hi:       #F1F5F9;
-  --sidebar-text:     #334155;
-  --sidebar-mute:     #64748B;
-
-  --bg:               #F8FAFC;
-  --page:             #F8FAFC;
-  --card-bg:          #FFFFFF;
-  --card-hover:       #F8FAFC;
-  --border:           #E2E8F0;
-  --border-subtle:    #F1F5F9;
-  --text:             #0F172A;
-  --text-soft:        #334155;
-  --text-faint:       #64748B;
-
-  color-scheme: light;
 }
 
 /* Light mode container & card conversions */
