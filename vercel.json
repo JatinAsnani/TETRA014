@@ -1,4 +1,10 @@
 {
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    }
+  },
   "version": 2,
   "builds": [
     {
