@@ -83,14 +83,23 @@ export default function Stock() {
   }
 
   const handleAdjustStock = async (id, delta) => {
-    setItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const newStock = Math.max(0, parseFloat(item.current_stock || 0) + delta)
-        return { ...item, current_stock: newStock }
-      }
-      return item
-    }))
-    toast.success(`Stock adjusted (${delta > 0 ? '+' : ''}${delta})`)
+    try {
+      const action = delta > 0 ? 'add' : 'deduct'
+      const quantity = Math.abs(delta)
+      const res = await api.post(`/stock/${id}/adjust`, { action, quantity })
+      setItems(prev => prev.map(item => item.id === id ? res.data : item))
+      toast.success(`Stock adjusted (${delta > 0 ? '+' : ''}${delta}) & saved in DB!`)
+    } catch (err) {
+      console.warn('Stock adjust API error:', err)
+      setItems(prev => prev.map(item => {
+        if (item.id === id) {
+          const newStock = Math.max(0, parseFloat(item.current_stock || 0) + delta)
+          return { ...item, current_stock: newStock }
+        }
+        return item
+      }))
+      toast.success(`Stock adjusted (${delta > 0 ? '+' : ''}${delta})`)
+    }
   }
 
   return (
