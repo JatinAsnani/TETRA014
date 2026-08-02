@@ -18,11 +18,16 @@ export default function Invoices() {
   const handleCreate = async (data) => {
     try {
       await api.post('/invoices', data)
-      toast.success('Invoice created successfully')
+      toast.success('Invoice created successfully! Recorded in DB & double-entry ledger.')
       setShowForm(false)
       refetch()
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create invoice')
+      console.error('Create Invoice Error:', err.response?.data)
+      const detail = err.response?.data?.detail
+      const msg = typeof detail === 'string' 
+        ? detail 
+        : (Array.isArray(detail) ? `${detail[0]?.loc?.slice(-1)[0]}: ${detail[0]?.msg}` : 'Failed to create invoice')
+      toast.error(msg)
     }
   }
 

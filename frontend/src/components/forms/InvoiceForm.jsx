@@ -42,31 +42,35 @@ export default function InvoiceForm({ initial, onSubmit, onCancel }) {
     setItems(next)
   }
 
-  const handleSubmit = (status) => {
-    if (!customerId) {
-      toast.error('Please select a customer')
+  const handleSubmit = async (status) => {
+    let targetCustomerId = customerId
+
+    if (!targetCustomerId) {
+      toast.error('Please select or enter a customer name')
       return
     }
+
     const validItems = items.filter(i => i.item_name && i.item_name.trim() !== '')
     if (validItems.length === 0) {
       toast.error('Please enter at least one item name')
       return
     }
+
     onSubmit({
-      customer_id: Number(customerId),
-      invoice_date: invoiceDate,
-      due_date: dueDate || null,
-      place_of_supply: placeOfSupply,
+      customer_id: Number(targetCustomerId),
+      invoice_date: invoiceDate || new Date().toISOString().split('T')[0],
+      due_date: (dueDate && dueDate.trim()) ? dueDate : null,
+      place_of_supply: placeOfSupply || 'Gujarat',
       notes,
       status,
       items: validItems.map(i => ({
-        item_name: i.item_name,
-        hsn_code: i.hsn_code,
-        quantity: +i.quantity,
-        unit: i.unit,
-        unit_price: +i.unit_price,
-        discount_pct: +i.discount_pct,
-        gst_rate: +i.gst_rate,
+        item_name: i.item_name.trim(),
+        hsn_code: i.hsn_code ? i.hsn_code.trim() : null,
+        quantity: parseFloat(i.quantity) || 1.0,
+        unit: i.unit || 'pcs',
+        unit_price: parseFloat(i.unit_price) || 0.0,
+        discount_pct: parseFloat(i.discount_pct) || 0.0,
+        gst_rate: parseFloat(i.gst_rate) || 18.0,
       })),
     })
   }
