@@ -215,7 +215,7 @@ def list_invoices(
         ))
 
     total = q.count()
-    items = q.order_by(models.Invoice.invoice_date.desc()).offset((page - 1) * limit).limit(limit).all()
+    items = q.order_by(models.Invoice.id.desc(), models.Invoice.invoice_date.desc()).offset((page - 1) * limit).limit(limit).all()
 
     summary_q = q.with_entities(
         func.coalesce(func.sum(models.Invoice.total_amount), 0),

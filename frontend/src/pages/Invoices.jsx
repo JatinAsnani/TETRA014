@@ -13,7 +13,7 @@ export default function Invoices() {
   const [showForm, setShowForm] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
   
-  const { items, total, summary, loading, refetch } = useInvoices({ status: statusFilter, search, page, limit: 20 })
+  const { items, total, summary, loading, refetch } = useInvoices({ status: statusFilter, search, page, limit: 100 })
 
   const handleCreate = async (data) => {
     try {
@@ -118,40 +118,63 @@ export default function Invoices() {
             No invoices found. Click "+ New Invoice" to create one.
           </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Invoice #</th><th>Customer</th><th>Date</th><th>Due</th>
-                <th className="num">Amount</th><th className="num">GST</th><th className="num">Total</th>
-                <th>Status</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((inv) => (
-                <tr key={inv.id}>
-                  <td className="link mono">{inv.invoice_number}</td>
-                  <td>{inv.customer_name || inv.customer?.name || 'Customer'}</td>
-                  <td>{inv.invoice_date}</td>
-                  <td>{inv.due_date || '-'}</td>
-                  <td className="num mono">₹{(inv.subtotal || inv.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td className="num mono">₹{(inv.total_gst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td className="num mono">₹{(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td>
-                    <span className={`badge ${(inv.status || 'draft').toLowerCase()}`}>
-                      {inv.status || 'Draft'}
-                    </span>
-                  </td>
-                  <td className="row-actions">
-                    <button className="text-link" onClick={() => downloadPdf(inv.id, inv.invoice_number)}>PDF</button>
-                    {inv.status !== 'paid' && (
-                      <button className="text-link" onClick={() => markPaid(inv.id)}>Paid</button>
-                    )}
-                    <button className="text-link danger" onClick={() => setDeleteId(inv.id)}>Delete</button>
-                  </td>
+          <>
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice #</th><th>Customer</th><th>Date</th><th>Due</th>
+                  <th className="num">Amount</th><th className="num">GST</th><th className="num">Total</th>
+                  <th>Status</th><th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((inv) => (
+                  <tr key={inv.id}>
+                    <td className="link mono">{inv.invoice_number}</td>
+                    <td>{inv.customer_name || inv.customer?.name || 'Customer'}</td>
+                    <td>{inv.invoice_date}</td>
+                    <td>{inv.due_date || '-'}</td>
+                    <td className="num mono">₹{(inv.subtotal || inv.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="num mono">₹{(inv.total_gst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="num mono">₹{(inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td>
+                      <span className={`badge ${(inv.status || 'draft').toLowerCase()}`}>
+                        {inv.status || 'Draft'}
+                      </span>
+                    </td>
+                    <td className="row-actions">
+                      <button className="text-link" onClick={() => downloadPdf(inv.id, inv.invoice_number)}>PDF</button>
+                      {inv.status !== 'paid' && (
+                        <button className="text-link" onClick={() => markPaid(inv.id)}>Paid</button>
+                      )}
+                      <button className="text-link danger" onClick={() => setDeleteId(inv.id)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            <div className="flex items-center justify-between p-3 border-t border-slate-800 text-xs text-slate-400">
+              <span>Showing {items.length} of {total} total invoices</span>
+              <div className="flex items-center gap-2">
+                <button 
+                  disabled={page <= 1} 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300"
+                >
+                  Previous
+                </button>
+                <span className="font-mono">Page {page}</span>
+                <button 
+                  disabled={items.length < 100 || page * 100 >= total} 
+                  onClick={() => setPage(p => p + 1)}
+                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
