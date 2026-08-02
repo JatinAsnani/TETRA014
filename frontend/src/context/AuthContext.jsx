@@ -8,12 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('tallai_token')
+    const token = localStorage.getItem('friday_token')
     if (token) {
       api.get('/auth/me')
         .then(res => setUser(res.data))
         .catch(() => {
-          localStorage.removeItem('tallai_token')
+          localStorage.removeItem('friday_token')
           setUser(null)
         })
         .finally(() => setLoading(false))
@@ -26,20 +26,20 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login/json', { email, password })
-    localStorage.setItem('tallai_token', res.data.access_token)
+    localStorage.setItem('friday_token', res.data.access_token)
     setUser(res.data.user)
     return res.data
   }
 
   const register = async (data) => {
     const res = await api.post('/auth/register', data)
-    localStorage.setItem('tallai_token', res.data.access_token)
+    localStorage.setItem('friday_token', res.data.access_token)
     setUser(res.data.user)
     return res.data
   }
 
   const logout = () => {
-    localStorage.removeItem('tallai_token')
+    localStorage.removeItem('friday_token')
     setUser(null)
   }
 
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
   const googleLogin = async (tokenOrData) => {
     const payload = typeof tokenOrData === 'string' ? { token: tokenOrData } : tokenOrData
     const res = await api.post('/auth/google', payload)
-    localStorage.setItem('tallai_token', res.data.access_token)
+    localStorage.setItem('friday_token', res.data.access_token)
     setUser(res.data.user)
     return res.data
   }

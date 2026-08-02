@@ -2,4 +2,4 @@
 .venv/
 __pycache__/
 *.pyc
-tallai.db
+friday.db

@@ -1,4 +1,4 @@
-"""Initialize TallAI database with demo user and sample records."""
+"""Initialize FRIDAY database with demo user and sample records."""
 import random
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -20,13 +20,13 @@ def seed_database():
     db = SessionLocal()
 
     try:
-        demo_user = db.query(models.User).filter(models.User.email == "demo@tallai.com").first()
+        demo_user = db.query(models.User).filter(models.User.email == "demo@friday.com").first()
 
         if not demo_user:
-            print("Seeding demo@tallai.com account...")
+            print("Seeding demo@friday.com account...")
             demo_user = models.User(
                 name="Ramesh Sharma",
-                email="demo@tallai.com",
+                email="demo@friday.com",
                 password_hash=get_password_hash("demo123"),
                 business_name="Sharma Traders & Hardware",
                 business_address="102 Industrial Area, Phase II, Ahmedabad, Gujarat",
@@ -177,9 +177,9 @@ def seed_database():
                 create_expense_ledger(db, demo_user.id, e)
 
             db.commit()
-            print("Demo user (demo@tallai.com / demo123) and sample records created successfully!")
+            print("Demo user (demo@friday.com / demo123) and sample records created successfully!")
         else:
-            print("Database already contains demo user demo@tallai.com.")
+            print("Database already contains demo user demo@friday.com.")
     except Exception as e:
         db.rollback()
         print(f"Error seeding database: {e}")

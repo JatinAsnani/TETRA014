@@ -232,7 +232,7 @@ async def process_chat_message(user_message: str, chat_history: list, user_id: i
             return {"reply": res["text"], "action": None, "data": None}
 
     except Exception as exc:
-        print(f"[TallAI] Gemini REST error: {exc}")
+        print(f"[FRIDAY] Gemini REST error: {exc}")
         return await _keyword_fallback(user_message, user_id, db)
 
     return await _keyword_fallback(user_message, user_id, db)

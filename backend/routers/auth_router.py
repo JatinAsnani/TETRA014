@@ -286,7 +286,7 @@ def get_hierarchy(
 class SubordinateCreate(BaseModel):
     name: str
     email: str
-    password: Optional[str] = "TallAI@123"
+    password: Optional[str] = "FRIDAY@123"
     role: str = "staff"
 
 
@@ -309,7 +309,7 @@ def create_subordinate(
 
     valid_roles = ["admin", "manager", "accountant", "staff"]
     role = data.role.lower() if (data.role and data.role.lower() in valid_roles) else "staff"
-    pass_raw = data.password.strip() if (data.password and data.password.strip()) else "TallAI@123"
+    pass_raw = data.password.strip() if (data.password and data.password.strip()) else "FRIDAY@123"
 
     existing = db.query(models.User).filter(models.User.email == email_clean).first()
     if existing:

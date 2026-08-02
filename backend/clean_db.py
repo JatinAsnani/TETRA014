@@ -41,7 +41,7 @@ def clean_database():
         print("Clearing MongoDB database...")
         try:
             import pymongo
-            db_name = os.getenv("MONGODB_DB_NAME", "tallai")
+            db_name = os.getenv("MONGODB_DB_NAME", "friday")
             client = pymongo.MongoClient(mongodb_uri)
             mongo_db = client[db_name]
             collections = mongo_db.list_collection_names()
