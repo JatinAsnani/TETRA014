@@ -100,11 +100,11 @@ export default function Ledger() {
                   className={`cursor-pointer flex items-center justify-between px-5 py-4 my-2 rounded-2xl border transition-all ${
                     selectedAccount?.name === a.name 
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/30' 
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm'
+                      : 'account-row-inactive shadow-sm'
                   }`}
                 >
                   <div className="font-bold text-sm">{a.name}</div>
-                  <div className={`amt mono font-bold text-xs ${selectedAccount?.name === a.name ? 'text-white' : a.neg ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  <div className={`amt mono font-bold text-xs ${selectedAccount?.name === a.name ? 'text-white' : a.neg ? 'text-rose-500' : 'text-emerald-500'}`}>
                     ₹{Math.abs(a.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
