@@ -41,7 +41,7 @@ export default function Navbar() {
             </div>
             <div className="topnav-brand-info">
               <div className="topnav-sub">
-                <span className="sparkle-icon">✨</span> AI Financial Accounting &amp; Risk Scanner
+                <span className="sparkle-icon">✨</span> Fraud Risk &amp; Invoice Discrepancy Audit Yaar
               </div>
             </div>
           </div>
