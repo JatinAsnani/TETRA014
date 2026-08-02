@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const defaultBackendUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://friday-4ev5.onrender.com'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: defaultBackendUrl,
 })
 
 api.interceptors.request.use(config => {
@@ -15,7 +17,7 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
       localStorage.removeItem('friday_token')
       window.location.href = '/login'
     }
