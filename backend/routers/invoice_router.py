@@ -18,14 +18,8 @@ router = APIRouter()
 
 
 def _next_invoice_number(db: Session, user_id: int) -> str:
-    last = (
-        db.query(models.Invoice)
-        .filter(models.Invoice.user_id == user_id)
-        .order_by(models.Invoice.id.desc())
-        .first()
-    )
-    num = (last.id if last else 0) + 1
-    return f"INV-{num:04d}"
+    max_id = db.query(func.max(models.Invoice.id)).scalar() or 0
+    return f"INV-{(max_id + 1):04d}"
 
 
 def _calc_invoice_items(items_data, same_state: bool):
