@@ -108,37 +108,19 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
     import re
     msg = user_message.lower()
 
-    if any(w in msg for w in ["name", "who are you", "naam", "kon ho", "identity"]):
-        return {
-            "reply": "Mera naam FRIDAy hai! Main aapka AI Financial Co-Pilot & Accounting Assistant hoon.",
-            "action": None,
-            "data": None
-        }
-
-    if any(w in msg for w in ["hindi", "hinglish", "bhasha", "language"]):
-        return {
-            "reply": "Haan bilkul! Main Hindi aur Hinglish dono samajhta hoon. Aap mujhse billing, GST, profit/loss report, ya accounts ki baat kar sakte hain. Bataiye main aapki kya madad karoon?",
-            "action": None,
-            "data": None
-        }
-
-    if any(w in msg for w in ["hi", "hello", "hey", "namaste", "pranam"]):
-        return {
-            "reply": "Namaste! Main FRIDAy AI Assistant hoon. Main aapki billing, GST calculation, ledger auditing aur financial queries me madad kar sakta hoon.",
-            "action": None,
-            "data": None
-        }
-
+    # 1. Customer Creation & Management Intent
     if any(w in msg for w in ["customer", "grahak", "krishna", "party", "add customer", "new customer", "payemnt", "payment", "aagya"]):
         cust_name = "Krishna"
         words = user_message.split()
         for i, word in enumerate(words):
             clean_word = word.strip("\\/.,!?")
-            if clean_word.lower() in ["customer", "grahak", "party", "naam", "name"] and i + 1 < len(words):
-                cust_name = words[i+1].strip("\\/.,!?").capitalize()
-                break
-            elif clean_word.lower() not in ["new", "customer", "hai", "ka", "add", "karo", "create", "grahak", "party", "payemnt", "payment", "aagya", "500000", "50000"]:
-                if len(clean_word) > 2 and not clean_word.isdigit():
+            if clean_word.lower() in ["customer", "grahak", "party", "naam", "name", "named", "called"] and i + 1 < len(words):
+                next_word = words[i+1].strip("\\/.,!?").capitalize()
+                if next_word.lower() not in ["named", "called", "new", "karo", "add"]:
+                    cust_name = next_word
+                    break
+            elif clean_word.lower() not in ["new", "customer", "hai", "ka", "add", "karo", "create", "grahak", "party", "payemnt", "payment", "aagya", "500000", "50000", "named", "called"]:
+                if len(clean_word) > 1 and not clean_word.isdigit():
                     cust_name = clean_word.capitalize()
 
         amount_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", msg)
@@ -183,6 +165,28 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
                 "action": "create_customer",
                 "data": {"name": cust_name, "amount": amount}
             }
+
+    # 2. Generic Identity & Greetings (only if no action intent triggered)
+    if re.search(r"\b(who are you|apka naam|aapka naam|tumhara naam|what is your name|identity|kon ho)\b", msg):
+        return {
+            "reply": "Mera naam FRIDAy hai! Main aapka AI Financial Co-Pilot & Accounting Assistant hoon.",
+            "action": None,
+            "data": None
+        }
+
+    if any(w in msg for w in ["hindi", "hinglish", "bhasha", "language"]):
+        return {
+            "reply": "Haan bilkul! Main Hindi aur Hinglish dono samajhta hoon. Aap mujhse billing, GST, profit/loss report, ya accounts ki baat kar sakte hain. Bataiye main aapki kya madad karoon?",
+            "action": None,
+            "data": None
+        }
+
+    if any(w in msg for w in ["hi", "hello", "hey", "namaste", "pranam"]):
+        return {
+            "reply": "Namaste! Main FRIDAy AI Assistant hoon. Main aapki billing, GST calculation, ledger auditing aur financial queries me madad kar sakta hoon.",
+            "action": None,
+            "data": None
+        }
 
     if any(w in msg for w in ["invoice", "inv", "sales bill", "banao", "bana"]):
         cust_name = "Ayaan"
