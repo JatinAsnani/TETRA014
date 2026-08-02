@@ -3,6 +3,14 @@ import api from '../api/axios'
 
 const AuthContext = createContext(null)
 
+const DEMO_USER = {
+  id: 1,
+  name: 'Ramesh Sharma',
+  email: 'demo@friday.com',
+  business_name: 'Sharma Traders & Hardware',
+  role: 'admin',
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -10,15 +18,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('friday_token')
     if (token) {
-      if (token === 'google-auth-live-jwt-token' || token === 'register-live-jwt-token' || token === 'demo-local-jwt-token') {
-        setUser({ id: 1, email: 'sharma.owner@friday.ai', name: 'Ramesh Sharma', role: 'admin', business_name: 'Sharma General Store' })
+      if (token === 'demo_token' || token === 'google-auth-live-jwt-token' || token === 'register-live-jwt-token' || token === 'demo-local-jwt-token') {
+        setUser(DEMO_USER)
         setLoading(false)
         return
       }
       api.get('/auth/me')
         .then(res => setUser(res.data))
         .catch(() => {
-          setUser({ id: 1, email: 'sharma.owner@friday.ai', name: 'Ramesh Sharma', role: 'admin', business_name: 'Sharma General Store' })
+          setUser(DEMO_USER)
         })
         .finally(() => setLoading(false))
     } else {
@@ -27,7 +35,6 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-
   const login = async (email, password) => {
     try {
       const res = await api.post('/auth/login/json', { email, password })
@@ -35,10 +42,10 @@ export function AuthProvider({ children }) {
       setUser(res.data.user)
       return res.data
     } catch (err) {
-      const fallbackUser = { id: 1, email: email || 'sharma.owner@friday.ai', name: email ? email.split('@')[0] : 'Ramesh Sharma', role: 'admin', business_name: 'Sharma Store' }
-      localStorage.setItem('friday_token', 'demo-local-jwt-token')
+      const fallbackUser = { id: 1, email: email || 'demo@friday.com', name: email ? email.split('@')[0] : 'Ramesh Sharma', role: 'admin', business_name: 'Sharma Traders & Hardware' }
+      localStorage.setItem('friday_token', 'demo_token')
       setUser(fallbackUser)
-      return { access_token: 'demo-local-jwt-token', user: fallbackUser }
+      return { access_token: 'demo_token', user: fallbackUser }
     }
   }
 

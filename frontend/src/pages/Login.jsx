@@ -469,8 +469,35 @@ export default function Login() {
               </button>
             </form>
 
-            {/* Register Link */}
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
+            {/* Register Link & 1-Click Demo Login */}
+            <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('demo@friday.com')
+                  setPassword('demo123')
+                  handleLoginSubmit(new Event('submit'))
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: 12,
+                  border: '1px solid var(--border)',
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  color: 'var(--primary-color)',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6
+                }}
+              >
+                <span>⚡</span> 1-Click Instant Demo Login
+              </button>
+
               <p style={{ fontSize: 12.5, color: 'var(--text-soft)', margin: 0 }}>
                 Don't have an account?{' '}
                 <Link to="/register" style={{ color: 'var(--primary-color)', fontWeight: 700, textDecoration: 'none' }}>

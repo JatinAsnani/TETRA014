@@ -1,9 +1,11 @@
 import axios from 'axios'
 
-const defaultBackendUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'https://friday-4ev5.onrender.com'
+const isBrowser = typeof window !== 'undefined'
+const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+const defaultBackendUrl = isLocalhost ? 'http://localhost:8000' : 'https://friday-4ev5.onrender.com'
 
 const api = axios.create({
-  baseURL: defaultBackendUrl,
+  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || defaultBackendUrl,
 })
 
 api.interceptors.request.use(config => {
@@ -19,7 +21,9 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
       localStorage.removeItem('friday_token')
-      window.location.href = '/login'
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }
