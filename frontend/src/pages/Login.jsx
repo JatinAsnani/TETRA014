@@ -57,7 +57,7 @@ export default function Login() {
         setBubbleText('Welcome to FRIDAY! 🥳🎉')
         setIsSuccess(true)
         toast.success('Welcome to FRIDAY!')
-        setTimeout(() => navigate('/'), 1200)
+        navigate('/', { replace: true })
       } catch (err) {
         setShowGoogleFallback(true)
         toast.error(getErrorMessage(err, 'Google auth failed. Try direct Google email connection.'))
@@ -146,7 +146,7 @@ export default function Login() {
       setBubbleText('Yay! Login Successful! 🥳🎉')
       setIsSuccess(true)
       toast.success('Welcome to FRIDAY!')
-      setTimeout(() => navigate('/'), 1200)
+      navigate('/', { replace: true })
     } catch (err) {
       setCatVideo('/cat_wrong.mp4')
       setBubbleText('Login Failed! 😿 Check credentials')
@@ -167,7 +167,7 @@ export default function Login() {
       setBubbleText('Signed in with Google! 🥳🎉')
       setIsSuccess(true)
       toast.success('Signed in with Google!')
-      setTimeout(() => navigate('/'), 1200)
+      navigate('/', { replace: true })
     } catch (err) {
       setCatVideo('/cat_wrong.mp4')
       setBubbleText('Google Login Failed 😿')
