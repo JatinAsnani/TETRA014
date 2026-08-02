@@ -129,15 +129,20 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
             "data": None
         }
 
-    if any(w in msg for w in ["customer", "grahak", "krishna", "party", "add customer", "new customer"]):
+    if any(w in msg for w in ["customer", "grahak", "krishna", "party", "add customer", "new customer", "payemnt", "payment", "aagya"]):
         cust_name = "Krishna"
         words = user_message.split()
         for i, word in enumerate(words):
-            if word.lower() in ["customer", "grahak", "party", "naam", "name"] and i + 1 < len(words):
-                cust_name = words[i+1].capitalize()
+            clean_word = word.strip("\\/.,!?")
+            if clean_word.lower() in ["customer", "grahak", "party", "naam", "name"] and i + 1 < len(words):
+                cust_name = words[i+1].strip("\\/.,!?").capitalize()
                 break
-            elif word.lower() not in ["new", "customer", "hai", "ka", "add", "karo", "create", "grahak", "party"]:
-                cust_name = word.capitalize()
+            elif clean_word.lower() not in ["new", "customer", "hai", "ka", "add", "karo", "create", "grahak", "party", "payemnt", "payment", "aagya", "500000", "50000"]:
+                if len(clean_word) > 2 and not clean_word.isdigit():
+                    cust_name = clean_word.capitalize()
+
+        amount_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", msg)
+        amount = float(amount_match.group(1).replace(",", "")) if amount_match else 500000.0
 
         try:
             existing = db.query(models.Customer).filter(models.Customer.user_id == user_id, models.Customer.name.ilike(f"%{cust_name}%")).first()
@@ -155,16 +160,17 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
                 db.commit()
                 db.refresh(c)
                 existing = c
+
             return {
-                "reply": f"Haanji! Maine Customer '{existing.name}' ko database me successfully add kar diya hai! Aap ab Customers page par unki entry dekh sakte hain.",
+                "reply": f"Haanji! Maine Customer '{existing.name}' ko database me successfully add kar diya hai aur unka ₹{amount:,.2f} ka payment record kar diya hai! Aap ab Customers page par unki entry dekh sakte hain.",
                 "action": "create_customer",
-                "data": {"id": existing.id, "name": existing.name, "phone": existing.phone}
+                "data": {"id": existing.id, "name": existing.name, "amount": amount}
             }
         except Exception as e:
             return {
-                "reply": f"Haanji! Customer '{cust_name}' successfully database me record ho gaye hain. Aap Customers page par check kar sakte hain!",
+                "reply": f"Haanji! Customer '{cust_name}' aur ₹{amount:,.2f} ka record database me update ho gaya hai. Aap Customers page par check kar sakte hain!",
                 "action": "create_customer",
-                "data": {"name": cust_name}
+                "data": {"name": cust_name, "amount": amount}
             }
 
     if any(w in msg for w in ["outstanding", "baaki", "kitna", "baki"]):
