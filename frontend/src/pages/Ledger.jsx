@@ -92,15 +92,15 @@ export default function Ledger() {
             <div className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700 pb-2">
               Select Account
             </div>
-            <div className="ilist space-y-2">
+            <div className="ilist space-y-2.5">
               {accounts.map((a) => (
                 <div 
                   key={a.name}
                   onClick={() => setSelectedAccount(a)}
-                  className={`irow cursor-pointer flex items-center justify-between px-4 py-3.5 my-1.5 rounded-xl border transition-all ${
+                  className={`cursor-pointer flex items-center justify-between px-5 py-4 my-2 rounded-2xl border transition-all ${
                     selectedAccount?.name === a.name 
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' 
-                      : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/30' 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm'
                   }`}
                 >
                   <div className="font-bold text-sm">{a.name}</div>
