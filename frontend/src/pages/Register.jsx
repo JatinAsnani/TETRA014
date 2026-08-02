@@ -9,8 +9,14 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [showGoogleFallback, setShowGoogleFallback] = useState(false)
   const [googleEmailInput, setGoogleEmailInput] = useState('')
-  const { register, googleLogin } = useAuth()
+  const { user, register, googleLogin } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true })
+    }
+  }, [user, navigate])
 
   // Theme State & Toggle
   const [theme, setTheme] = useState(() => localStorage.getItem('app-theme') || 'dark')
