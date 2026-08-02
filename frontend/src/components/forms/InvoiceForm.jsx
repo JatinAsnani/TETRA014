@@ -17,6 +17,7 @@ export default function InvoiceForm({ initial, onSubmit, onCancel }) {
   const [items, setItems] = useState(initial?.items?.length ? initial.items : [{ ...emptyItem }])
   const [notes, setNotes] = useState(initial?.notes || '')
   const [showPreview, setShowPreview] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const selectedCustomer = customers.find(c => c.id === Number(customerId))
   const sameState = !selectedCustomer?.state || selectedCustomer.state === 'Gujarat'
@@ -56,23 +57,30 @@ export default function InvoiceForm({ initial, onSubmit, onCancel }) {
       return
     }
 
-    onSubmit({
-      customer_id: Number(targetCustomerId),
-      invoice_date: invoiceDate || new Date().toISOString().split('T')[0],
-      due_date: (dueDate && dueDate.trim()) ? dueDate : null,
-      place_of_supply: placeOfSupply || 'Gujarat',
-      notes,
-      status,
-      items: validItems.map(i => ({
-        item_name: i.item_name.trim(),
-        hsn_code: i.hsn_code ? i.hsn_code.trim() : null,
-        quantity: parseFloat(i.quantity) || 1.0,
-        unit: i.unit || 'pcs',
-        unit_price: parseFloat(i.unit_price) || 0.0,
-        discount_pct: parseFloat(i.discount_pct) || 0.0,
-        gst_rate: parseFloat(i.gst_rate) || 18.0,
-      })),
-    })
+    setSubmitting(true)
+    try {
+      await onSubmit({
+        customer_id: Number(targetCustomerId),
+        invoice_date: invoiceDate || new Date().toISOString().split('T')[0],
+        due_date: (dueDate && dueDate.trim()) ? dueDate : null,
+        place_of_supply: placeOfSupply || 'Gujarat',
+        notes,
+        status,
+        items: validItems.map(i => ({
+          item_name: i.item_name.trim(),
+          hsn_code: i.hsn_code ? i.hsn_code.trim() : null,
+          quantity: parseFloat(i.quantity) || 1.0,
+          unit: i.unit || 'pcs',
+          unit_price: parseFloat(i.unit_price) || 0.0,
+          discount_pct: parseFloat(i.discount_pct) || 0.0,
+          gst_rate: parseFloat(i.gst_rate) || 18.0,
+        })),
+      })
+    } catch (err) {
+      console.error('Invoice submit handler error:', err)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -297,32 +305,36 @@ export default function InvoiceForm({ initial, onSubmit, onCancel }) {
         {onCancel && (
           <button 
             type="button" 
+            disabled={submitting}
             onClick={onCancel} 
-            className="px-3.5 py-2 text-xs text-slate-400 hover:text-white font-medium rounded-lg border border-slate-700"
+            className="px-3.5 py-2 text-xs text-slate-400 hover:text-white font-medium rounded-lg border border-slate-700 disabled:opacity-50"
           >
             Cancel
           </button>
         )}
         <button 
           type="button" 
+          disabled={submitting}
           onClick={() => setShowPreview(!showPreview)} 
-          className="px-3.5 py-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg transition-colors border border-slate-700"
+          className="px-3.5 py-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg transition-colors border border-slate-700 disabled:opacity-50"
         >
           {showPreview ? 'Hide Preview' : 'Preview'}
         </button>
         <button 
           type="button" 
+          disabled={submitting}
           onClick={() => handleSubmit('draft')} 
-          className="px-3.5 py-2 text-xs bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors shadow"
+          className="px-3.5 py-2 text-xs bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors shadow disabled:opacity-50 flex items-center gap-1.5"
         >
-          Save Draft
+          {submitting ? 'Saving Draft...' : 'Save Draft'}
         </button>
         <button 
           type="button" 
+          disabled={submitting}
           onClick={() => handleSubmit('sent')} 
-          className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors shadow-lg"
+          className="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors shadow-lg disabled:opacity-50 flex items-center gap-1.5"
         >
-          Save &amp; Send
+          {submitting ? 'Creating Invoice...' : 'Save & Send'}
         </button>
       </div>
     </div>
