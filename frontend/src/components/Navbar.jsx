@@ -36,8 +36,8 @@ export default function Navbar() {
       <div className="topnav-top">
         <div className="topnav-top-inner">
           <div className="topnav-brand" onClick={() => window.location.reload()} style={{ cursor: 'pointer' }} title="Click to refresh page">
-            <div className="topnav-logo-badge" title="TallAI System">
-              <img src="/logo.png" alt="TallAI Logo" className="topnav-logo-img" />
+            <div className="topnav-logo-badge" title="FRIDAY System">
+              <img src="/logo.png" alt="FRIDAY Logo" className="topnav-logo-img" />
             </div>
             <div className="topnav-brand-info">
               <div className="topnav-sub">
@@ -79,7 +79,7 @@ export default function Navbar() {
                   <div className="header-avatar">{userInitials}</div>
                   <div>
                     <div className="header-name">{displayName}</div>
-                    <div className="header-email">{user?.email || 'admin@tallai.com'}</div>
+                    <div className="header-email">{user?.email || 'admin@friday.com'}</div>
                   </div>
                 </div>
 

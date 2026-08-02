@@ -701,7 +701,7 @@ def get_readiness_report(
     ]
 
     summary = (
-        f"{total_scanned} total records scanned across TallAI database. "
+        f"{total_scanned} total records scanned across FRIDAY database. "
         f"{verified_mismatch_count} Verified Mismatches, {unresolved_count} Unresolved Inconsistencies, "
         f"and {missing_info_count} Missing Information cases detected. "
         f"Books are currently {readiness:.1f}% audit-ready for GST & IT filings."

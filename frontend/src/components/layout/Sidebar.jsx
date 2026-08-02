@@ -24,8 +24,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     }`}>
       <div className="p-5 border-b border-slate-700 flex items-center justify-between">
         <div>
-          <h1 className="text-white font-bold text-xl">TallAI</h1>
-          <p className="text-slate-400 text-xs mt-0.5">AI Accounting</p>
+          <h1 className="text-white font-bold text-xl">FRIDAY</h1>
+          <p className="text-slate-400 text-xs mt-0.5">AI Accounting &amp; Risk Scanner</p>
         </div>
         <button 
           onClick={() => setIsOpen(false)}
