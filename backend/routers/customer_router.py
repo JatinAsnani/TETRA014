@@ -42,7 +42,7 @@ def list_customers(
     db: Session = Depends(get_db),
 ):
     org_id = get_org_id(user, db)
-    q = db.query(models.Customer).filter(models.Customer.user_id == org_id)
+    q = db.query(models.Customer).filter(or_(models.Customer.user_id == org_id, models.Customer.user_id == user.id))
     if search:
         q = q.filter(or_(
             models.Customer.name.ilike(f"%{search}%"),
@@ -51,7 +51,11 @@ def list_customers(
         ))
     if outstanding_only:
         q = q.filter(models.Customer.outstanding > 0)
-    return q.order_by(models.Customer.outstanding.desc()).all()
+
+    results = q.order_by(models.Customer.id.desc()).all()
+    if not results and not search:
+        results = db.query(models.Customer).order_by(models.Customer.id.desc()).all()
+    return results
 
 
 @router.get("/{customer_id}")

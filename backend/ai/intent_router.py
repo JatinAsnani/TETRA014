@@ -144,17 +144,28 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
         amount_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", msg)
         amount = float(amount_match.group(1).replace(",", "")) if amount_match else 500000.0
 
+        target_user_id = user_id
         try:
-            existing = db.query(models.Customer).filter(models.Customer.user_id == user_id, models.Customer.name.ilike(f"%{cust_name}%")).first()
+            from deps import get_org_id
+            user_obj = db.query(models.User).filter(models.User.id == user_id).first() or db.query(models.User).first()
+            if user_obj:
+                target_user_id = get_org_id(user_obj, db)
+        except Exception:
+            pass
+
+        try:
+            existing = db.query(models.Customer).filter(models.Customer.name.ilike(f"%{cust_name}%")).first()
             if not existing:
                 c = models.Customer(
-                    user_id=user_id,
+                    user_id=target_user_id,
                     name=cust_name,
                     phone="9876543210",
                     email=f"{cust_name.lower()}@gmail.com",
                     city="Ahmedabad",
                     state="Gujarat",
-                    address="Market Yard, Ahmedabad"
+                    address="Market Yard, Ahmedabad",
+                    outstanding=0,
+                    total_business=amount
                 )
                 db.add(c)
                 db.commit()
@@ -162,7 +173,7 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
                 existing = c
 
             return {
-                "reply": f"Haanji! Maine Customer '{existing.name}' ko database me successfully add kar diya hai aur unka ₹{amount:,.2f} ka payment record kar diya hai! Aap ab Customers page par unki entry dekh sakte hain.",
+                "reply": f"Haanji! Maine Customer '{existing.name}' ko database me successfully add kar diya hai aur unka ₹{amount:,.2f} ka record update kar diya hai! Aap ab Customers page par unki entry dekh sakte hain.",
                 "action": "create_customer",
                 "data": {"id": existing.id, "name": existing.name, "amount": amount}
             }
