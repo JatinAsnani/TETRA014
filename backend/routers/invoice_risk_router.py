@@ -613,3 +613,85 @@ def get_readiness_report(
         "follow_up_questions": questions,
     }
 
+
+@router.post("/seed-synthetic-dataset")
+def seed_synthetic_dataset(
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    org_id = get_org_id(user, db)
+    scanned_list = _get_user_scanned(org_id)
+
+    today_str = date.today().isoformat()
+    synthetic_samples = [
+        {
+            "scanned_invoice_id": f"syn-01-{today_str}",
+            "invoice_number": "INV-2291",
+            "invoice_date": "2026-07-31",
+            "vendor_name": "Anand Traders",
+            "vendor_gstin": "24AAACA1234F1Z1",
+            "taxable_value": 84000.00,
+            "tax_amount": 15120.00,
+            "total_amount": 99120.00,
+            "file_name": "anand_traders_inv2291.pdf",
+            "notes": "Predefined synthetic test invoice - Duplicate entry check against ledger INV-2288"
+        },
+        {
+            "scanned_invoice_id": f"syn-02-{today_str}",
+            "invoice_number": "INV-7740",
+            "invoice_date": "2026-07-31",
+            "vendor_name": "Nova Packaging Supplies",
+            "vendor_gstin": "24AAXCN9012Z1",
+            "taxable_value": 35000.00,
+            "tax_amount": 6300.00,
+            "total_amount": 41300.00,
+            "file_name": "nova_packaging_scan_07.jpg",
+            "notes": "Predefined synthetic test invoice - Invalid 14-digit GSTIN checksum failure"
+        },
+        {
+            "scanned_invoice_id": f"syn-03-{today_str}",
+            "invoice_number": "INV-9042",
+            "invoice_date": "2026-07-30",
+            "vendor_name": "Suresh Metal Works",
+            "vendor_gstin": "27AAACS9876H1Z3",
+            "taxable_value": 100338.98,
+            "tax_amount": 18061.02,
+            "total_amount": 118400.00,
+            "file_name": "suresh_metal_works_aug.pdf",
+            "notes": "Predefined synthetic test invoice - Exceeds ledger purchase entry PL-9042 by ₹10,000"
+        },
+        {
+            "scanned_invoice_id": f"syn-04-{today_str}",
+            "invoice_number": "INV-5510",
+            "invoice_date": "2026-07-29",
+            "vendor_name": "Kiran Enterprises",
+            "vendor_gstin": "24AAACK5555J1Z4",
+            "taxable_value": 45000.00,
+            "tax_amount": 8100.00,
+            "total_amount": 53100.00,
+            "file_name": "kiran_ent_batch3.pdf",
+            "notes": "Predefined synthetic test invoice - Unusual cadence: 3 invoices within 48 hours"
+        },
+        {
+            "scanned_invoice_id": f"syn-05-{today_str}",
+            "invoice_number": "INV-1099",
+            "invoice_date": "2026-07-28",
+            "vendor_name": "Apex Supplies Pvt Ltd",
+            "vendor_gstin": "24AAACA9876E1Z5",
+            "taxable_value": 42500.00,
+            "tax_amount": 7650.00,
+            "total_amount": 52000.00,
+            "file_name": "apex_supplies_bill.png",
+            "notes": "Predefined synthetic test invoice - Taxable + Tax arithmetic mismatch"
+        }
+    ]
+
+    for item in synthetic_samples:
+        scanned_list.append(item)
+
+    return {
+        "status": "success",
+        "message": "Loaded 5 predefined synthetic MSME test invoices with accounting exceptions into Risk Scanner session.",
+        "added_count": len(synthetic_samples)
+    }
+

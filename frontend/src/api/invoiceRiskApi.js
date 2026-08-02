@@ -122,3 +122,8 @@ export async function generateReadinessReport() {
   }
 }
 
+export async function seedSyntheticDataset() {
+  const res = await api.post('/invoice-risk/seed-synthetic-dataset')
+  return res.data
+}
+

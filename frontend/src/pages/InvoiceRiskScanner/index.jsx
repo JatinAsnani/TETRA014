@@ -5,7 +5,8 @@ import ExtractedFieldsEditor from './ExtractedFieldsEditor'
 import ExceptionsList from './ExceptionsList'
 import ExceptionDetail from './ExceptionDetail'
 import ReadinessReport from './ReadinessReport'
-import { confirmInvoice, reconcileInvoice } from '../../api/invoiceRiskApi'
+import { confirmInvoice, reconcileInvoice, seedSyntheticDataset } from '../../api/invoiceRiskApi'
+import toast from 'react-hot-toast'
 
 export default function InvoiceRiskScanner() {
   const [activeTab, setActiveTab] = useState('upload') // 'upload' | 'exceptions' | 'report'
@@ -13,10 +14,25 @@ export default function InvoiceRiskScanner() {
   const [selectedException, setSelectedException] = useState(null)
   const [refreshCounter, setRefreshCounter] = useState(0)
   const [reconcileSuccessMsg, setReconcileSuccessMsg] = useState(null)
+  const [seeding, setSeeding] = useState(false)
 
   const handleInvoiceExtracted = (data) => {
     setExtractedData(data)
     setReconcileSuccessMsg(null)
+  }
+
+  const handleSeedSynthetic = async () => {
+    setSeeding(true)
+    try {
+      const res = await seedSyntheticDataset()
+      toast.success(res.message || 'Synthetic test dataset loaded!')
+      setRefreshCounter(prev => prev + 1)
+      setActiveTab('exceptions')
+    } catch (err) {
+      toast.error('Failed to load synthetic dataset')
+    } finally {
+      setSeeding(false)
+    }
   }
 
   const handleConfirmFields = async (confirmedFields) => {
@@ -66,9 +82,18 @@ export default function InvoiceRiskScanner() {
               </p>
             </div>
 
-            {/* Quick Action Badge */}
-            <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-700 px-3 py-2 rounded-xl text-xs text-slate-300 font-medium">
-              <span>⚡</span> Live Gemini AI Active
+            {/* Quick Action Badges */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button 
+                onClick={handleSeedSynthetic}
+                disabled={seeding}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <span>⚡</span> {seeding ? 'Loading Dataset...' : 'Load Synthetic Test Dataset'}
+              </button>
+              <div className="flex items-center justify-center gap-1.5 bg-slate-900/80 border border-slate-700 px-3 py-2 rounded-xl text-xs text-slate-300 font-medium">
+                <span>🤖</span> Gemini Vision AI Active
+              </div>
             </div>
           </div>
         </div>
