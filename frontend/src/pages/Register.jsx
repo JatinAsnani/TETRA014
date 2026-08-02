@@ -180,10 +180,7 @@ export default function Register() {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '8px 18px',
-              borderRadius: 16,
-              background: 'var(--effects-color)',
-              border: '1.5px solid var(--primary-color)',
+              padding: '4px 0',
               marginBottom: 8,
             }}
           >

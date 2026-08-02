@@ -397,20 +397,20 @@ button{font-family:inherit; cursor:pointer;}
   gap: 14px;
 }
 .topnav-logo-badge {
-  background: var(--card-bg);
-  border: 1.5px solid var(--primary-color);
-  border-radius: 16px;
-  padding: 8px 20px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: none !important;
   transition: all 0.22s ease;
 }
 .topnav-logo-badge:hover {
   transform: translateY(-1px) scale(1.02);
-  border-color: var(--primary-color);
-  box-shadow: 0 6px 20px var(--effects-color);
+  border: none !important;
+  box-shadow: none !important;
 }
 .topnav-logo-img {
   height: 28px;

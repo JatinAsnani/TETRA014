@@ -670,25 +670,28 @@ export default function TeamManagement() {
                 <>
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                      <span className="text-xs font-semibold text-slate-500">Total Entries Logged</span>
-                      <p className="text-xl font-extrabold text-slate-900 mt-1">{activityData.stats.total_actions}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Actions recorded</p>
+                    <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Entries Logged</span>
+                      <p className="text-2xl font-black text-slate-900 mt-1">{activityData.stats.total_actions}</p>
+                      <p className="text-[11px] text-slate-400 mt-1 font-medium">Actions recorded</p>
                     </div>
-                    <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-                      <span className="text-xs font-semibold text-emerald-700">Sales Invoiced</span>
-                      <p className="text-xl font-extrabold text-emerald-900 mt-1">₹{(activityData.stats.total_revenue || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-[11px] text-emerald-600 mt-0.5">{activityData.stats.invoices_count} invoices</p>
+
+                    <div className="p-4 bg-white border border-emerald-300 rounded-2xl shadow-sm flex flex-col justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Sales Invoiced</span>
+                      <p className="text-2xl font-black text-emerald-600 mt-1">₹{(activityData.stats.total_revenue || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[11px] text-emerald-600 mt-1 font-semibold">{activityData.stats.invoices_count} invoices</p>
                     </div>
-                    <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl">
-                      <span className="text-xs font-semibold text-amber-700">Expenses Logged</span>
-                      <p className="text-xl font-extrabold text-amber-900 mt-1">₹{(activityData.stats.total_expenses || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-[11px] text-amber-600 mt-0.5">{activityData.stats.expenses_count} entries</p>
+
+                    <div className="p-4 bg-white border border-amber-300 rounded-2xl shadow-sm flex flex-col justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Expenses Logged</span>
+                      <p className="text-2xl font-black text-amber-600 mt-1">₹{(activityData.stats.total_expenses || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[11px] text-amber-600 mt-1 font-semibold">{activityData.stats.expenses_count} entries</p>
                     </div>
-                    <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
-                      <span className="text-xs font-semibold text-blue-700">Payments Collected</span>
-                      <p className="text-xl font-extrabold text-blue-900 mt-1">₹{(activityData.stats.total_payments || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-[11px] text-blue-600 mt-0.5">{activityData.stats.payments_count} payments</p>
+
+                    <div className="p-4 bg-white border border-blue-300 rounded-2xl shadow-sm flex flex-col justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Payments Collected</span>
+                      <p className="text-2xl font-black text-blue-600 mt-1">₹{(activityData.stats.total_payments || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[11px] text-blue-600 mt-1 font-semibold">{activityData.stats.payments_count} payments</p>
                     </div>
                   </div>
 
