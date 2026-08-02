@@ -472,6 +472,7 @@ def get_exceptions_list(
 ):
     org_id = get_org_id(user, db)
     all_exc = _build_db_exceptions(org_id, db)
+    _sync_exceptions_to_db(org_id, db, all_exc)
 
     filtered = []
     for exc in all_exc:
@@ -500,6 +501,57 @@ def get_exceptions_list(
     }
 
 
+def _sync_exceptions_to_db(user_id: int, db: Session, exceptions: List[Dict[str, Any]]):
+    import json
+    for exc in exceptions:
+        exc_id = exc.get("exception_id")
+        if not exc_id:
+            continue
+        existing = db.query(models.AuditException).filter(
+            models.AuditException.user_id == user_id,
+            models.AuditException.exception_id == exc_id
+        ).first()
+
+        snapshot_val = exc.get("linked_ledger_snapshot")
+        snapshot_str = json.dumps(snapshot_val) if isinstance(snapshot_val, dict) else str(snapshot_val or "")
+
+        if existing:
+            existing.invoice_number = exc.get("invoice_number")
+            existing.vendor_name = exc.get("vendor_name")
+            existing.total_amount = float(exc.get("total_amount") or 0.0)
+            existing.exception_type = exc.get("exception_type")
+            existing.classification = exc.get("classification")
+            existing.risk_score = int(exc.get("risk_score") or 50)
+            existing.description = exc.get("description")
+            existing.follow_up_question = exc.get("follow_up_question")
+            existing.linked_ledger_snapshot = snapshot_str
+            if exc.get("resolved") is True:
+                existing.resolved = True
+                existing.resolution_note = exc.get("resolution_note") or existing.resolution_note
+        else:
+            db.add(models.AuditException(
+                user_id=user_id,
+                exception_id=exc_id,
+                scanned_invoice_id=str(exc.get("scanned_invoice_id") or ""),
+                invoice_number=exc.get("invoice_number"),
+                vendor_name=exc.get("vendor_name"),
+                total_amount=float(exc.get("total_amount") or 0.0),
+                exception_type=exc.get("exception_type"),
+                classification=exc.get("classification"),
+                risk_score=int(exc.get("risk_score") or 50),
+                description=exc.get("description"),
+                resolved=bool(exc.get("resolved", False)),
+                resolution_note=exc.get("resolution_note"),
+                follow_up_question=exc.get("follow_up_question"),
+                linked_ledger_snapshot=snapshot_str
+            ))
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[AuditException Sync Note] {e}")
+
+
 @router.get("/exceptions/{exception_id}")
 def get_exception_detail(
     exception_id: str,
@@ -525,10 +577,20 @@ def resolve_exception(
     org_id = get_org_id(user, db)
     resolved_set = _get_resolved_ids(org_id)
     resolved_set.add(exception_id)
+
+    db_exc = db.query(models.AuditException).filter(
+        models.AuditException.user_id == org_id,
+        models.AuditException.exception_id == exception_id
+    ).first()
+    if db_exc:
+        db_exc.resolved = True
+        db_exc.resolution_note = payload.resolution_note or "Resolved after audit review."
+        db.commit()
+
     return {
         "success": True,
         "exception_id": exception_id,
-        "message": "Exception resolved successfully.",
+        "message": "Exception resolved successfully and saved into SQLite database.",
         "resolution_note": payload.resolution_note
     }
 

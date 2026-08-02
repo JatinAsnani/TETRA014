@@ -326,3 +326,44 @@ class ActivityLog(Base):
     amount = Column(Numeric(12, 2), default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class ScannedInvoice(Base):
+    __tablename__ = "scanned_invoices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    scanned_invoice_id = Column(String(100), unique=True, index=True)
+    invoice_number = Column(String(100))
+    invoice_date = Column(String(50))
+    vendor_name = Column(String(200))
+    vendor_gstin = Column(String(50))
+    taxable_value = Column(Numeric(14, 2), default=0)
+    tax_amount = Column(Numeric(14, 2), default=0)
+    total_amount = Column(Numeric(14, 2), default=0)
+    file_name = Column(String(255))
+    notes = Column(Text)
+    line_items = Column(Text)
+    status = Column(String(50), default="SCANNED")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AuditException(Base):
+    __tablename__ = "audit_exceptions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    exception_id = Column(String(100), unique=True, index=True)
+    scanned_invoice_id = Column(String(100))
+    invoice_number = Column(String(100))
+    vendor_name = Column(String(200))
+    total_amount = Column(Numeric(14, 2), default=0)
+    exception_type = Column(String(100))
+    classification = Column(String(100))
+    risk_score = Column(Integer, default=50)
+    description = Column(Text)
+    resolved = Column(Boolean, default=False)
+    resolution_note = Column(Text)
+    follow_up_question = Column(Text)
+    linked_ledger_snapshot = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
