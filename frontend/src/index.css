@@ -72,10 +72,10 @@
 }
 
 [data-theme="light"] {
-  --bg-color:         #F8FAFC; /* 1. Background Color */
-  --primary-color:    #0284C7; /* 2. Primary Color: Refined Dark Aqua Blue */
-  --effects-color:    rgba(2, 132, 199, 0.14); /* 3. Effects / Glow Color */
-  --chatbot-primary-color: #0D9488; /* Chatbot Primary Color */
+  --bg-color:         #F8FAFC;
+  --primary-color:    #0284C7;
+  --effects-color:    rgba(2, 132, 199, 0.08);
+  --chatbot-primary-color: #0D9488;
 
   --sidebar:          #FFFFFF;
   --sidebar-hi:       #F1F5F9;
@@ -83,13 +83,13 @@
   --sidebar-mute:     #64748B;
 
   --bg:               #F8FAFC;
-  --page:             #F1F5F9;
+  --page:             #F8FAFC;
   --card-bg:          #FFFFFF;
   --card-hover:       #F8FAFC;
-  --border:           #CBD5E1;
-  --border-subtle:    #E2E8F0;
+  --border:           #E2E8F0;
+  --border-subtle:    #F1F5F9;
   --text:             #0F172A;
-  --text-soft:        #475569;
+  --text-soft:        #334155;
   --text-faint:       #64748B;
 
   /* Monochromatic Color System */
@@ -107,6 +107,118 @@
   --coral-soft:       var(--effects-color);
 
   color-scheme: light;
+}
+
+/* ===== Pristine Light Mode Component Overrides ===== */
+[data-theme="light"] .card,
+[data-theme="light"] .mini-card,
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-950,
+[data-theme="light"] .bg-slate-900\/60,
+[data-theme="light"] .bg-slate-950\/60,
+[data-theme="light"] .bg-slate-950\/40,
+[data-theme="light"] .bg-slate-800\/60 {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-800\/80 {
+  background-color: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+}
+
+[data-theme="light"] .bg-indigo-950,
+[data-theme="light"] .bg-indigo-950\/80,
+[data-theme="light"] .bg-indigo-950\/60,
+[data-theme="light"] .bg-indigo-950\/40 {
+  background-color: #EFF6FF !important;
+  border-color: #BFDBFE !important;
+  color: #1E40AF !important;
+}
+
+[data-theme="light"] .text-white,
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200,
+[data-theme="light"] .text-slate-300 {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .text-slate-400,
+[data-theme="light"] .text-slate-500 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .text-indigo-200,
+[data-theme="light"] .text-indigo-300 {
+  color: #1D4ED8 !important;
+}
+
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea,
+[data-theme="light"] .search-input,
+[data-theme="light"] .select {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] select::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+[data-theme="light"] table {
+  background-color: #FFFFFF !important;
+}
+
+[data-theme="light"] thead tr {
+  background-color: #F8FAFC !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+[data-theme="light"] thead th {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] tbody tr {
+  border-bottom: 1px solid #F1F5F9 !important;
+}
+
+[data-theme="light"] tbody tr:hover {
+  background-color: #F8FAFC !important;
+}
+
+[data-theme="light"] tbody td {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .badge.draft {
+  background-color: #F1F5F9 !important;
+  color: #475569 !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+[data-theme="light"] .badge.sent {
+  background-color: #E0F2FE !important;
+  color: #0369A1 !important;
+  border: 1px solid #BAE6FD !important;
+}
+
+[data-theme="light"] .badge.paid {
+  background-color: #DCFCE7 !important;
+  color: #15803D !important;
+  border: 1px solid #BBF7D0 !important;
+}
+
+[data-theme="light"] .badge.overdue {
+  background-color: #FEE2E2 !important;
+  color: #B91C1C !important;
+  border: 1px solid #FCA5A5 !important;
 }
 
 :root {
