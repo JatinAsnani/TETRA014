@@ -16,8 +16,14 @@ export default function Login() {
   const [showGoogleFallback, setShowGoogleFallback] = useState(false)
   const [googleEmailInput, setGoogleEmailInput] = useState('')
 
-  const { login, googleLogin } = useAuth()
+  const { user, login, googleLogin } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true })
+    }
+  }, [user, navigate])
 
   // Validation Error State for Cat reaction
   const [catVideo, setCatVideo] = useState('/cat_login.mp4')
