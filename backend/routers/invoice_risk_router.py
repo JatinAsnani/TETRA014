@@ -15,7 +15,6 @@ router = APIRouter()
 
 GSTIN_REGEX = re.compile(r"^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$", re.IGNORECASE)
 
-_scanned_invoices_db: Dict[int, List[Dict[str, Any]]] = {}
 _user_resolved_exceptions: Dict[int, set] = {}
 
 
@@ -36,41 +35,36 @@ class ResolvePayload(BaseModel):
     resolution_note: Optional[str] = "Resolved after audit review."
 
 
-def _get_user_scanned(user_id: int, db: Session = None) -> List[Dict[str, Any]]:
-    if db is not None:
-        try:
-            import json
-            sc_rows = db.query(models.ScannedInvoice).filter(models.ScannedInvoice.user_id == user_id).all()
-            if sc_rows:
-                res = []
-                for r in sc_rows:
+def _get_user_scanned(user_id: int, db: Session) -> List[Dict[str, Any]]:
+    try:
+        import json
+        sc_rows = db.query(models.ScannedInvoice).filter(models.ScannedInvoice.user_id == user_id).all()
+        res = []
+        for r in sc_rows:
+            items = []
+            if r.line_items:
+                try:
+                    items = json.loads(r.line_items)
+                except Exception:
                     items = []
-                    if r.line_items:
-                        try:
-                            items = json.loads(r.line_items)
-                        except Exception:
-                            items = []
-                    res.append({
-                        "scanned_invoice_id": r.scanned_invoice_id,
-                        "invoice_number": r.invoice_number,
-                        "invoice_date": r.invoice_date,
-                        "vendor_name": r.vendor_name,
-                        "vendor_gstin": r.vendor_gstin,
-                        "taxable_value": float(r.taxable_value or 0.0),
-                        "tax_amount": float(r.tax_amount or 0.0),
-                        "total_amount": float(r.total_amount or 0.0),
-                        "file_name": r.file_name,
-                        "notes": r.notes,
-                        "line_items": items,
-                        "status": r.status
-                    })
-                return res
-        except Exception as e:
-            print(f"[ScannedInvoice DB Fetch Note] {e}")
-
-    if user_id not in _scanned_invoices_db:
-        _scanned_invoices_db[user_id] = []
-    return _scanned_invoices_db[user_id]
+            res.append({
+                "scanned_invoice_id": r.scanned_invoice_id,
+                "invoice_number": r.invoice_number,
+                "invoice_date": r.invoice_date,
+                "vendor_name": r.vendor_name,
+                "vendor_gstin": r.vendor_gstin,
+                "taxable_value": float(r.taxable_value or 0.0),
+                "tax_amount": float(r.tax_amount or 0.0),
+                "total_amount": float(r.total_amount or 0.0),
+                "file_name": r.file_name,
+                "notes": r.notes,
+                "line_items": items,
+                "status": r.status
+            })
+        return res
+    except Exception as e:
+        print(f"[ScannedInvoice DB Fetch Note] {e}")
+        return []
 
 
 def _get_resolved_ids(user_id: int, db: Session = None) -> set:
@@ -151,7 +145,7 @@ def _build_db_exceptions(user_id: int, db: Session) -> List[Dict[str, Any]]:
             })
 
     # 2. Scanned Invoices Analysis
-    scanned_list = _get_user_scanned(user_id)
+    scanned_list = _get_user_scanned(user_id, db)
     purchases = db.query(models.PurchaseInvoice).filter(models.PurchaseInvoice.user_id == user_id).all()
     sales_invoices = db.query(models.Invoice).filter(models.Invoice.user_id == user_id).all()
 
@@ -293,8 +287,6 @@ async def upload_or_extract_invoice(
 
     extracted_items = []
     if file:
-        # Clear stale prior session scans when uploading a new file
-        _scanned_invoices_db[org_id] = []
         contents = await file.read()
         res = extract_invoice_from_file(contents, file.filename)
         if isinstance(res, list):
@@ -326,30 +318,56 @@ async def upload_or_extract_invoice(
         }]
 
     formatted_items = []
-    scanned_store = _get_user_scanned(org_id)
-
+    import json
+    from decimal import Decimal
     for idx, item in enumerate(extracted_items):
         sc_id = item.get("scanned_invoice_id") or f"sc-{ts}-{idx+1}"
+        taxable_value = float(item.get("taxable_value", 0.0))
+        tax_amount = float(item.get("tax_amount", 0.0))
+        total_amount = float(item.get("total_amount", 0.0))
+        if total_amount == 0.0 and taxable_value > 0.0:
+            total_amount = taxable_value + tax_amount
+        
+        # Save to database
+        db_sc = models.ScannedInvoice(
+            user_id=org_id,
+            scanned_invoice_id=sc_id,
+            invoice_number=item.get("invoice_number", f"INV-{ts % 10000 + idx:04d}"),
+            invoice_date=item.get("invoice_date") or date.today().isoformat(),
+            vendor_name=item.get("vendor_name") or "Unknown Vendor",
+            vendor_gstin=item.get("vendor_gstin"),
+            taxable_value=Decimal(str(taxable_value)),
+            tax_amount=Decimal(str(tax_amount)),
+            total_amount=Decimal(str(total_amount)),
+            file_name=file.filename if file else item.get("file_name", "uploaded_invoice.pdf"),
+            notes=item.get("notes") or "AI extracted invoice",
+            line_items=json.dumps(item.get("line_items", [])),
+            status="EXTRACTED"
+        )
+        db.add(db_sc)
+        
         formatted = {
             "scanned_invoice_id": sc_id,
-            "invoice_number": item.get("invoice_number", f"INV-{ts % 10000 + idx:04d}"),
-            "invoice_date": item.get("invoice_date") or date.today().isoformat(),
-            "vendor_name": item.get("vendor_name") or "Unknown Vendor",
-            "vendor_gstin": item.get("vendor_gstin"),
-            "taxable_value": float(item.get("taxable_value", 0.0)),
-            "tax_amount": float(item.get("tax_amount", 0.0)),
-            "total_amount": float(item.get("total_amount", 0.0)),
-            "file_name": file.filename if file else item.get("file_name", "uploaded_invoice.pdf"),
-            "notes": item.get("notes") or "AI extracted invoice",
+            "invoice_number": db_sc.invoice_number,
+            "invoice_date": db_sc.invoice_date,
+            "vendor_name": db_sc.vendor_name,
+            "vendor_gstin": db_sc.vendor_gstin,
+            "taxable_value": float(db_sc.taxable_value),
+            "tax_amount": float(db_sc.tax_amount),
+            "total_amount": float(db_sc.total_amount),
+            "file_name": db_sc.file_name,
+            "notes": db_sc.notes,
             "line_items": item.get("line_items", []),
-            "status": "EXTRACTED",
-            "created_at": item.get("created_at") or datetime.utcnow().isoformat()
+            "status": db_sc.status,
+            "created_at": datetime.utcnow().isoformat()
         }
-        scanned_store = [x for x in scanned_store if x.get("scanned_invoice_id") != sc_id]
-        scanned_store.append(formatted)
         formatted_items.append(formatted)
-
-    _scanned_invoices_db[org_id] = scanned_store
+        
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Upload ScannedInvoice DB Commit Error] {e}")
 
     if len(formatted_items) == 1:
         return formatted_items[0]
@@ -374,7 +392,6 @@ async def upload_or_extract_invoice(
     }
 
 
-
 @router.post("/confirm")
 @router.post("/confirm/{scanned_invoice_id}")
 def confirm_scanned_invoice(
@@ -384,17 +401,58 @@ def confirm_scanned_invoice(
     db: Session = Depends(get_db),
 ):
     org_id = get_org_id(user, db)
-    scanned_store = _get_user_scanned(org_id)
-    
     target_id = scanned_invoice_id or payload.get("scanned_invoice_id")
-    match = next((item for item in scanned_store if item.get("scanned_invoice_id") == target_id), None)
     
-    if match:
-        match.update(payload)
+    db_sc = db.query(models.ScannedInvoice).filter(
+        models.ScannedInvoice.user_id == org_id,
+        models.ScannedInvoice.scanned_invoice_id == target_id
+    ).first()
+    
+    import json
+    from decimal import Decimal
+    if db_sc:
+        if "invoice_number" in payload:
+            db_sc.invoice_number = payload["invoice_number"]
+        if "invoice_date" in payload:
+            db_sc.invoice_date = payload["invoice_date"]
+        if "vendor_name" in payload:
+            db_sc.vendor_name = payload["vendor_name"]
+        if "vendor_gstin" in payload:
+            db_sc.vendor_gstin = payload["vendor_gstin"]
+        if "taxable_value" in payload:
+            db_sc.taxable_value = Decimal(str(payload["taxable_value"]))
+        if "tax_amount" in payload:
+            db_sc.tax_amount = Decimal(str(payload["tax_amount"]))
+        if "total_amount" in payload:
+            db_sc.total_amount = Decimal(str(payload["total_amount"]))
+        if "notes" in payload:
+            db_sc.notes = payload["notes"]
+        if "line_items" in payload:
+            db_sc.line_items = json.dumps(payload["line_items"])
+        db_sc.status = "CONFIRMED"
     else:
-        if target_id:
-            payload["scanned_invoice_id"] = target_id
-        scanned_store.append(payload)
+        db_sc = models.ScannedInvoice(
+            user_id=org_id,
+            scanned_invoice_id=target_id,
+            invoice_number=payload.get("invoice_number"),
+            invoice_date=payload.get("invoice_date"),
+            vendor_name=payload.get("vendor_name"),
+            vendor_gstin=payload.get("vendor_gstin"),
+            taxable_value=Decimal(str(payload.get("taxable_value", 0.0))),
+            tax_amount=Decimal(str(payload.get("tax_amount", 0.0))),
+            total_amount=Decimal(str(payload.get("total_amount", 0.0))),
+            file_name=payload.get("file_name"),
+            notes=payload.get("notes"),
+            line_items=json.dumps(payload.get("line_items", [])),
+            status="CONFIRMED"
+        )
+        db.add(db_sc)
+        
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Confirm ScannedInvoice DB Commit Error] {e}")
 
     return {
         "status": "CONFIRMED",
@@ -411,7 +469,7 @@ def reconcile_invoice(
     db: Session = Depends(get_db),
 ):
     org_id = get_org_id(user, db)
-    scanned_list = _get_user_scanned(org_id)
+    scanned_list = _get_user_scanned(org_id, db)
 
     target_scans = [s for s in scanned_list if s.get("scanned_invoice_id") == scanned_invoice_id] if scanned_invoice_id else scanned_list
     if not target_scans and scanned_list:
@@ -617,7 +675,7 @@ def resolve_exception(
     db: Session = Depends(get_db),
 ):
     org_id = get_org_id(user, db)
-    resolved_set = _get_resolved_ids(org_id)
+    resolved_set = _get_resolved_ids(org_id, db)
     resolved_set.add(exception_id)
 
     db_exc = db.query(models.AuditException).filter(
@@ -724,7 +782,7 @@ def seed_synthetic_dataset(
     db: Session = Depends(get_db),
 ):
     org_id = get_org_id(user, db)
-    scanned_list = _get_user_scanned(org_id)
+    scanned_list = _get_user_scanned(org_id, db)
 
     today_str = date.today().isoformat()
     synthetic_samples = [

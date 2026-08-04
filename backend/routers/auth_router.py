@@ -69,7 +69,7 @@ def login_json(data: schemas.UserLogin, db: Session = Depends(get_db)):
         try:
             user = models.User(
                 name=email_clean.split("@")[0].capitalize() if email_clean else "Demo User",
-                email=email_clean or "demo@tallai.com",
+                email=email_clean or "demo@friday.com",
                 password_hash=get_password_hash(data.password or "demo123"),
                 business_name="Sharma General Store",
                 role="admin",
