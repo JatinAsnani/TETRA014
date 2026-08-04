@@ -1,29 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-
-const initialMessages = [
-  { 
-    from: 'ai', 
-    text: "Hello! I am FRIDAy, your AI Financial Co-Pilot & Risk Engine. I can help create invoices, reconcile GST returns, audit ledger entries, or monitor overdue balances. What would you like to check?" 
-  },
-  { 
-    from: 'user', 
-    text: 'Create invoice for Raj Traders 50 bags cement at 380 rupees 18% GST' 
-  },
-  { 
-    from: 'ai', 
-    text: "Done! Invoice #INV-0031 for Raj Traders has been generated: 50 bags @ ₹380 = ₹19,000 + 18% GST (₹3,420). Grand Total: ₹22,420.00." 
-  },
-  { 
-    from: 'user', 
-    text: 'Show me total GST payable for August' 
-  },
-  { 
-    from: 'ai', 
-    text: "Based on current sales returns (GSTR-1 Output GST: ₹3,420.00) and zero eligible ITC claimed, Net GST Payable for August 2026 is ₹3,420.00 due by Sept 20." 
-  },
-];
+import { useChat } from '../hooks/useChat';
 
 // Small Realistic ₹500 Indian Banknote
 function RealINR500PhotoNote({ width = 64, height = 30 }) {
@@ -120,9 +97,8 @@ export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [showGuide, setShowGuide] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState(initialMessages);
+  const { messages, sendMessage, isTyping, clearMessages } = useChat();
   const [draft, setDraft] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [cashParticles, setCashParticles] = useState([]);
   
   // Track system theme (Light Mode vs Dark Mode)
@@ -183,49 +159,12 @@ export default function FloatingChat() {
   async function send(textToSend) {
     const text = textToSend || draft;
     if (!text.trim()) return;
-    setMessages((prev) => [...prev, { from: 'user', text }]);
+    await sendMessage(text);
     setDraft('');
-    setIsTyping(true);
-
-    try {
-      const res = await api.post('/chat', { message: text });
-      setIsTyping(false);
-      const replyText = res.data?.reply || res.data?.message || 'FRIDAy response processed.';
-      setMessages((prev) => [...prev, { from: 'ai', text: replyText }]);
-    } catch (err) {
-      setIsTyping(false);
-      const lower = text.toLowerCase();
-      let aiReply = `Ji Haan! Aapke kehne ke mutabiq saari entries aur ledger records update kar diye gaye hain.`;
-
-      if (lower.includes('customer') || lower.includes('krishna') || lower.includes('bill') || lower.includes('payment') || lower.includes('grahak')) {
-        let name = 'Krishna';
-        if (lower.includes('krishna')) name = 'Krishna';
-        let amount = '50,000';
-        const numMatch = text.match(/\d+/);
-        if (numMatch) amount = Number(numMatch[0]).toLocaleString('en-IN');
-
-        aiReply = `Haanji! Maine '${name}' ko new Customer me add kar diya hai aur unka ₹${amount} ka Sales Bill & Paid Payment entry record kar di hai! Aap ab Customers page par jaakar check kar sakte hain.`;
-
-
-      } else if (lower.includes('name') || lower.includes('who are you') || lower.includes('naam') || lower.includes('kon ho')) {
-        aiReply = `Mera naam FRIDAy hai! Main aapka AI Financial Assistant & Risk Auditor hoon.`;
-      } else if (lower.includes('hindi') || lower.includes('hinglish') || lower.includes('bhasha') || lower.includes('language')) {
-        aiReply = `Haan bilkul! Main simple Hindi aur Hinglish me baat karta hoon. Aap billing, customers, GST, ya accounts ke baare me pucho!`;
-      } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey') || lower.includes('namaste')) {
-        aiReply = `Namaste! Main FRIDAy AI Assistant hoon. Financial entries, customer billings, ya GST report me kya madad karoon?`;
-      } else if (lower.includes('invoice') || lower.includes('create')) {
-        aiReply = `New Sales Invoice #INV-0032 create kar diya hai. Taxable amount ₹45,000.00 + 18% IGST (₹8,100.00). Ready for client dispatch.`;
-      } else if (lower.includes('tax') || lower.includes('gst')) {
-        aiReply = `GSTR-3B Tax Summary: Output Tax ₹3,420.00 | Input Tax Credit (ITC) Available ₹15,120.00. Net Payable: ₹0.00.`;
-      } else if (lower.includes('overdue') || lower.includes('accounts')) {
-        aiReply = `⚠️ Overdue Accounts Flagged! Total Outstanding: ₹2,52,627.50. Top account: Anand Traders (₹99,120.00).`;
-      }
-      setMessages((prev) => [...prev, { from: 'ai', text: aiReply }]);
-    }
   }
 
   function handleClear() {
-    setMessages([{ from: 'ai', text: "Chat history cleared. How can FRIDAy assist you with your books now?" }]);
+    clearMessages();
   }
 
   const windowWidth = isExpanded 
@@ -308,7 +247,7 @@ export default function FloatingChat() {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--chatbot-primary-color)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🤖</span> Meet FRIDAy AI Assistant!
+              <span>🤖</span> Meet FRIDAY AI Assistant!
             </div>
             <button
               onClick={() => setShowGuide(false)}
@@ -348,7 +287,7 @@ export default function FloatingChat() {
                 boxShadow: 'none',
               }}
             >
-              Try FRIDAy AI Now 👇
+              Try FRIDAY AI Now 👇
             </button>
             
             <span
@@ -410,7 +349,7 @@ export default function FloatingChat() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <img
                 src="/logo.png"
-                alt="FRIDAy Logo"
+                alt="FRIDAY Logo"
                 style={{
                   height: 28,
                   width: 'auto',
@@ -624,7 +563,7 @@ export default function FloatingChat() {
                   }}
                 >
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--chatbot-primary-color)', display: 'inline-block' }}></span>
-                  FRIDAy is checking accounting database...
+                  FRIDAY is checking accounting database...
                 </div>
               </div>
             )}
@@ -696,7 +635,7 @@ export default function FloatingChat() {
             cursor: 'pointer',
           }}
           onClick={handleToggle}
-          title="Click to talk with FRIDAy AI!"
+          title="Click to talk with FRIDAY AI!"
         >
           {/* Speech Bubble "Hi, Mujhse pucho" */}
           <div
@@ -784,7 +723,7 @@ export default function FloatingChat() {
             cursor: 'pointer',
             outline: 'none',
           }}
-          title="Chat with FRIDAy AI Assistant"
+          title="Chat with FRIDAY AI Assistant"
         >
           {/* Circular Bot Avatar Badge */}
           <div
@@ -823,7 +762,7 @@ export default function FloatingChat() {
           {/* Chatbot Text */}
           <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.25 }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.01em', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {isOpen ? 'Close Chatbot' : 'Ask FRIDAy AI'}
+              {isOpen ? 'Close Chatbot' : 'Ask FRIDAY AI'}
               {!isOpen && (
                 <span style={{ fontSize: 9.5, background: 'rgba(255, 255, 255, 0.25)', color: '#FFFFFF', padding: '1px 7px', borderRadius: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   LIVE

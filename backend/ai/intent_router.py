@@ -47,6 +47,9 @@ async def execute_tool(tool_name: str, tool_input: dict, user_id: int, db) -> di
     elif tool_name == "adjust_stock":
         return await stock_router.adjust_stock_from_ai(tool_input, user_id, db)
 
+    elif tool_name == "create_customer":
+        return await customer_router.create_customer_from_ai(tool_input, user_id, db)
+
     elif tool_name == "create_purchase":
         from routers import purchase_router
         return await purchase_router.create_purchase_from_ai(tool_input, user_id, db)
@@ -61,6 +64,8 @@ async def execute_tool(tool_name: str, tool_input: dict, user_id: int, db) -> di
 def _format_tool_result(data: dict) -> str:
     if not data or data.get("error"):
         return f"Kuch problem aayi: {data.get('error', 'Unknown error')}"
+    if "customer_id" in data:
+        return f"Done! Customer '{data.get('name')}' database me successfully create ho gaya hai. Aap Customers page par check kar sakte hain!"
     if "invoice_number" in data:
         return (
             f"Done! Invoice #{data['invoice_number']} {data.get('customer', '')} ke liye create ho gaya. "
@@ -107,6 +112,20 @@ def _format_tool_result(data: dict) -> str:
 async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
     import re
     msg = user_message.lower()
+
+    if "english" in msg:
+        return {
+            "reply": "Certainly! I can converse in English. How can I assist you with your invoices, customer ledgers, GST summaries, or reports today?",
+            "action": None,
+            "data": None
+        }
+
+    if any(w in msg for w in ["kesa", "kaisa", "how are you"]):
+        return {
+            "reply": "Main bilkul badhiya hoon! Aap bataiye, aapka business aur accounts kaisa chal raha hai? Main aapki billing aur ledger me kya madad karoon?",
+            "action": None,
+            "data": None
+        }
 
     # 1. Customer Creation & Management Intent
     if any(w in msg for w in ["customer", "grahak", "krishna", "party", "add customer", "new customer", "payemnt", "payment", "aagya"]):
@@ -169,7 +188,7 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
     # 2. Generic Identity & Greetings (only if no action intent triggered)
     if re.search(r"\b(who are you|apka naam|aapka naam|tumhara naam|what is your name|identity|kon ho)\b", msg):
         return {
-            "reply": "Mera naam FRIDAy hai! Main aapka AI Financial Co-Pilot & Accounting Assistant hoon.",
+            "reply": "Mera naam FRIDAY hai! Main aapka AI Financial Co-Pilot & Accounting Assistant hoon.",
             "action": None,
             "data": None
         }
@@ -183,7 +202,7 @@ async def _keyword_fallback(user_message: str, user_id: int, db) -> dict:
 
     if any(w in msg for w in ["hi", "hello", "hey", "namaste", "pranam"]):
         return {
-            "reply": "Namaste! Main FRIDAy AI Assistant hoon. Main aapki billing, GST calculation, ledger auditing aur financial queries me madad kar sakta hoon.",
+            "reply": "Namaste! Main FRIDAY AI Assistant hoon. Main aapki billing, GST calculation, ledger auditing aur financial queries me madad kar sakta hoon.",
             "action": None,
             "data": None
         }

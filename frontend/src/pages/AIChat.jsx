@@ -1,22 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/Topbar.jsx';
-
-const initialMessages = [
-  { from: 'user', text: 'Create invoice for Raj Traders 50 bags cement at 380 rupees 18% GST' },
-  { from: 'ai', text: "Done! Invoice #INV-0031 Raj Traders ke liye create ho gaya, total ₹22,420." },
-  { from: 'user', text: 'aaa' },
-  { from: 'ai', text: "I'm sorry, I didn't understand that. Could you please rephrase your request?" },
-];
+import { useChat } from '../hooks/useChat';
 
 export default function AIChat() {
-  const [messages, setMessages] = useState(initialMessages);
+  const { messages, sendMessage, isTyping } = useChat();
   const [draft, setDraft] = useState('');
   const navigate = useNavigate();
 
-  function send() {
+  async function send() {
     if (!draft.trim()) return;
-    setMessages((prev) => [...prev, { from: 'user', text: draft }]);
+    await sendMessage(draft);
     setDraft('');
   }
 
@@ -26,12 +20,12 @@ export default function AIChat() {
       <div className="chat-layout">
         <div>
           <div className="qa-label">Quick Actions</div>
-          <button className="qa-btn">New Invoice</button>
-          <button className="qa-btn">Record Payment</button>
-          <button className="qa-btn">Check Outstanding</button>
-          <button className="qa-btn">Today's Sales</button>
-          <button className="qa-btn">Add Expense</button>
-          <button className="qa-btn">GST Summary</button>
+          <button className="qa-btn" onClick={() => sendMessage('Create new sales invoice')}>New Invoice</button>
+          <button className="qa-btn" onClick={() => sendMessage('Record payment')}>Record Payment</button>
+          <button className="qa-btn" onClick={() => sendMessage('Summarize top overdue accounts')}>Check Outstanding</button>
+          <button className="qa-btn" onClick={() => sendMessage("Show today's sales")}>Today's Sales</button>
+          <button className="qa-btn" onClick={() => sendMessage('Add expense rent 1500')}>Add Expense</button>
+          <button className="qa-btn" onClick={() => sendMessage('Check GSTR-3B tax summary for August')}>GST Summary</button>
           <button
             className="qa-btn"
             style={{ borderColor: 'var(--blue)', color: 'var(--blue)' }}
@@ -50,6 +44,17 @@ export default function AIChat() {
               )}
             </div>
           ))}
+          {isTyping && (
+            <div className="msg-row">
+              <div className="msg-ai">
+                <div className="who">FRIDAY</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--chatbot-primary-color)', display: 'inline-block' }}></span>
+                  FRIDAY is checking accounting database...
+                </div>
+              </div>
+            </div>
+          )}
           <div className="chat-input-row">
             <input
               type="text"
