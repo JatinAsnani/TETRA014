@@ -392,6 +392,155 @@ async def upload_or_extract_invoice(
     }
 
 
+@router.post("/upload-csv")
+async def upload_csv(
+    file: UploadFile = File(...),
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    org_id = get_org_id(user, db)
+    contents = await file.read()
+    
+    try:
+        csv_data = contents.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            csv_data = contents.decode("latin1")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="Unable to decode CSV file encoding")
+
+    import csv
+    import io
+    from decimal import Decimal
+
+    f = io.StringIO(csv_data)
+    reader = csv.reader(f)
+    headers = next(reader, None)
+    if not headers:
+        raise HTTPException(status_code=400, detail="CSV file is empty")
+
+    header_map = {}
+    for idx, h in enumerate(headers):
+        h_clean = h.strip().lower().replace(" ", "_")
+        if h_clean in ("vendor", "vendor_name"):
+            header_map["vendor_name"] = idx
+        elif h_clean in ("gstin", "vendor_gstin"):
+            header_map["vendor_gstin"] = idx
+        elif h_clean in ("amount", "total_amount", "total"):
+            header_map["total_amount"] = idx
+        elif h_clean in ("taxable", "taxable_value", "subtotal"):
+            header_map["taxable_value"] = idx
+        elif h_clean in ("tax", "tax_amount", "gst"):
+            header_map["tax_amount"] = idx
+        elif h_clean in ("invoice_number", "invoice_no", "bill_no", "bill_number"):
+            header_map["invoice_number"] = idx
+        elif h_clean in ("date", "invoice_date"):
+            header_map["invoice_date"] = idx
+        elif h_clean in ("notes", "description"):
+            header_map["notes"] = idx
+
+    required_headers = ["vendor_name", "invoice_number", "total_amount"]
+    for rh in required_headers:
+        if rh not in header_map:
+            raise HTTPException(status_code=400, detail=f"CSV is missing required column: {rh}")
+
+    ts = int(datetime.utcnow().timestamp() * 1000)
+    imported_count = 0
+    skipped_count = 0
+    total_amount_sum = 0.0
+    errors = []
+
+    for row_idx, row in enumerate(reader, start=2):
+        if not row:
+            continue
+        if len(row) < len(headers):
+            errors.append({"row": row_idx, "reason": "malformed row structure"})
+            skipped_count += 1
+            continue
+
+        vendor_name = row[header_map["vendor_name"]].strip() if "vendor_name" in header_map else ""
+        invoice_number = row[header_map["invoice_number"]].strip() if "invoice_number" in header_map else ""
+        gstin_val = row[header_map["vendor_gstin"]].strip() if "vendor_gstin" in header_map else ""
+        total_amount_str = row[header_map["total_amount"]].strip() if "total_amount" in header_map else ""
+        taxable_value_str = row[header_map["taxable_value"]].strip() if "taxable_value" in header_map else "0"
+        tax_amount_str = row[header_map["tax_amount"]].strip() if "tax_amount" in header_map else "0"
+        invoice_date = row[header_map["invoice_date"]].strip() if "invoice_date" in header_map else ""
+        notes = row[header_map["notes"]].strip() if "notes" in header_map else ""
+
+        if not vendor_name:
+            errors.append({"row": row_idx, "reason": "missing required field: vendor_name"})
+            skipped_count += 1
+            continue
+        if not invoice_number:
+            errors.append({"row": row_idx, "reason": "missing required field: invoice_number"})
+            skipped_count += 1
+            continue
+
+        if not gstin_val:
+            errors.append({"row": row_idx, "reason": "missing GSTIN"})
+            skipped_count += 1
+            continue
+        if not GSTIN_REGEX.match(gstin_val):
+            errors.append({"row": row_idx, "reason": "invalid GSTIN format"})
+            skipped_count += 1
+            continue
+
+        try:
+            tot_val = float(total_amount_str)
+        except ValueError:
+            errors.append({"row": row_idx, "reason": "invalid amount format"})
+            skipped_count += 1
+            continue
+
+        try:
+            taxable_val = float(taxable_value_str) if taxable_value_str else 0.0
+        except ValueError:
+            taxable_val = 0.0
+
+        try:
+            tax_val = float(tax_amount_str) if tax_amount_str else 0.0
+        except ValueError:
+            tax_val = 0.0
+
+        if not invoice_date:
+            invoice_date = date.today().isoformat()
+
+        sc_id = f"sc-csv-{ts}-{row_idx}"
+        db_sc = models.ScannedInvoice(
+            user_id=org_id,
+            scanned_invoice_id=sc_id,
+            invoice_number=invoice_number,
+            invoice_date=invoice_date,
+            vendor_name=vendor_name,
+            vendor_gstin=gstin_val,
+            taxable_value=Decimal(str(taxable_val)),
+            tax_amount=Decimal(str(tax_val)),
+            total_amount=Decimal(str(tot_val)),
+            file_name=file.filename,
+            notes=notes or "Imported via CSV upload",
+            line_items="[]",
+            status="SCANNED"
+        )
+        db.add(db_sc)
+        imported_count += 1
+        total_amount_sum += tot_val
+
+    if imported_count > 0:
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database commit error: {e}")
+
+    return {
+        "imported_count": imported_count,
+        "skipped_count": skipped_count,
+        "total_amount": round(total_amount_sum, 2),
+        "errors": errors,
+        "isFallback": False
+    }
+
+
 @router.post("/confirm")
 @router.post("/confirm/{scanned_invoice_id}")
 def confirm_scanned_invoice(
