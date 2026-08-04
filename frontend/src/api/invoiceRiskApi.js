@@ -1,5 +1,6 @@
 import api from './axios'
 import { mockSampleInvoices } from './mockInvoiceRiskData'
+import toast from 'react-hot-toast'
 
 export function generateOfflineFallbackInvoice(file) {
   const filename = file?.name || 'Uploaded_Invoice.pdf'
@@ -39,7 +40,9 @@ export async function uploadInvoice(file, allowOfflineFallback = false) {
     return res.data
   } catch (err) {
     console.warn('Backend upload server unreachable or error, using fallback extraction engine', err)
-    return generateOfflineFallbackInvoice(file || { name: 'Uploaded_Bill.png' })
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    const fallback = generateOfflineFallbackInvoice(file || { name: 'Uploaded_Bill.png' })
+    return { ...fallback, isFallback: true }
   }
 }
 
@@ -52,7 +55,8 @@ export async function confirmInvoice(scannedInvoiceId, editedFields) {
     return { ...res.data, status: 'CONFIRMED' }
   } catch (err) {
     console.warn('Backend confirm unreachable, proceeding offline', err)
-    return { scanned_invoice_id: scannedInvoiceId, ...editedFields, status: 'CONFIRMED' }
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    return { scanned_invoice_id: scannedInvoiceId, ...editedFields, status: 'CONFIRMED', isFallback: true }
   }
 }
 
@@ -62,7 +66,8 @@ export async function reconcileInvoice(scannedInvoiceId) {
     return res.data
   } catch (err) {
     console.warn('Backend reconcile unreachable, proceeding offline', err)
-    return { scanned_invoice_id: scannedInvoiceId, exceptions_found: 1, status: 'RECONCILED' }
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    return { scanned_invoice_id: scannedInvoiceId, exceptions_found: 1, status: 'RECONCILED', isFallback: true }
   }
 }
 
@@ -81,7 +86,8 @@ export async function getExceptions(filters = {}) {
     return { total: list.length, exceptions: list }
   } catch (err) {
     console.error('getExceptions error:', err)
-    return { total: 0, exceptions: [] }
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    return { total: 0, exceptions: [], isFallback: true }
   }
 }
 
@@ -99,7 +105,8 @@ export async function resolveException(exceptionId, note = '') {
     const res = await api.post(`/invoice-risk/exceptions/${exceptionId}/resolve`, { resolution_note: note })
     return res.data
   } catch (err) {
-    return { status: 'resolved', exception_id: exceptionId }
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    return { status: 'resolved', exception_id: exceptionId, isFallback: true }
   }
 }
 
@@ -108,7 +115,8 @@ export async function generateFollowUpQuestion(exceptionId) {
     const res = await api.post(`/invoice-risk/exceptions/${exceptionId}/follow-up`)
     return res.data
   } catch (err) {
-    return { question: `Dear Vendor, please clarify the tax discrepancy for invoice #${exceptionId}.` }
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    return { question: `Dear Vendor, please clarify the tax discrepancy for invoice #${exceptionId}.`, isFallback: true }
   }
 }
 
@@ -117,6 +125,7 @@ export async function generateReadinessReport() {
     const res = await api.get('/invoice-risk/readiness-report')
     return res.data
   } catch (err) {
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
     return {
       total_invoices_scanned: 4,
       verified_mismatch_count: 1,
@@ -124,7 +133,8 @@ export async function generateReadinessReport() {
       missing_info_count: 1,
       readiness_percentage: 82.5,
       summary_text: "Audit readiness is at 82.5%. Reconcile open verified mismatch entries before GST filing deadline.",
-      follow_up_questions: []
+      follow_up_questions: [],
+      isFallback: true
     }
   }
 }

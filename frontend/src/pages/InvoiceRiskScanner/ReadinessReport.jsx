@@ -47,6 +47,12 @@ export default function ReadinessReport({ refreshTrigger }) {
 
   return (
     <div className="space-y-6">
+      {report.isFallback && (
+        <div className="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs px-4 py-3 rounded-xl flex items-center gap-2">
+          <span>⚠</span>
+          <span>Sample data — backend unavailable.</span>
+        </div>
+      )}
       
       {/* Top Banner & Readiness Gauge */}
       <div className="risk-scanner-card bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 shadow-xl grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">

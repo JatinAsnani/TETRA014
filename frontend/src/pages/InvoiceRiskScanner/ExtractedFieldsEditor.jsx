@@ -32,6 +32,12 @@ export default function ExtractedFieldsEditor({ extractedData, onConfirm, onCanc
 
   return (
     <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 shadow-xl space-y-6">
+      {items.some(item => item.isFallback) && (
+        <div className="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs px-4 py-3 rounded-xl flex items-center gap-2">
+          <span>⚠</span>
+          <span>Sample data — backend unavailable.</span>
+        </div>
+      )}
       <div className="flex items-center justify-between border-b border-slate-700/80 pb-4">
         <div>
           <div className="flex items-center gap-2">

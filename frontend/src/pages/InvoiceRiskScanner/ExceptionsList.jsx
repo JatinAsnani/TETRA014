@@ -8,6 +8,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
   const [search, setSearch] = useState('')
   const [classificationFilter, setClassificationFilter] = useState('ALL')
   const [sortBy, setSortBy] = useState('risk_score_desc')
+  const [isFallback, setIsFallback] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -22,6 +23,7 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
         sort_by: sortBy
       })
       setExceptions(res.exceptions || [])
+      setIsFallback(Boolean(res.isFallback))
     } catch (err) {
       console.error(err)
     } finally {
@@ -48,6 +50,12 @@ export default function ExceptionsList({ onSelectException, refreshTrigger }) {
 
   return (
     <div className="space-y-6">
+      {isFallback && (
+        <div className="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs px-4 py-3 rounded-xl flex items-center gap-2">
+          <span>⚠</span>
+          <span>Sample data — backend unavailable.</span>
+        </div>
+      )}
 
       {/* KPI Stats Overview Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

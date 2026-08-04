@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import ProtectedRoute from './components/ui/ProtectedRoute'
 import Navbar from './components/Navbar.jsx'
 import FloatingChat from './components/FloatingChat.jsx'
@@ -87,6 +88,8 @@ export default function App() {
           </Routes>
         </div>
       </div>
+      
+      <Toaster position="top-right" />
 
       {/* Floating Chat Assistant */}
       {!isAuthPage && <FloatingChat />}
