@@ -5,7 +5,6 @@ import ProtectedRoute from './components/ui/ProtectedRoute'
 import Navbar from './components/Navbar.jsx'
 import FloatingChat from './components/FloatingChat.jsx'
 
-import InvoiceRiskScanner from './pages/InvoiceRiskScanner/index.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AIChat from './pages/AIChat.jsx'
 import Invoices from './pages/Invoices.jsx'
@@ -65,7 +64,6 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/invoice-risk-scanner" element={<ProtectedRoute><InvoiceRiskScanner /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
             <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
             <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} />

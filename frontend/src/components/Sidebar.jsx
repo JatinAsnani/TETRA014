@@ -15,7 +15,6 @@ export default function Sidebar() {
       <NavLink to="/invoices" className={navClass}><span className="ic">📄</span>Invoices</NavLink>
 
       <div className="nav-label">Risk Scanner <span className="pill">NEW</span></div>
-      <NavLink to="/invoice-risk-scanner" className={navClass}><span className="ic">🔍</span>Invoice Risk Scanner</NavLink>
       <NavLink to="/scan" className={navClass}><span className="ic">📤</span>Scan &amp; Extract</NavLink>
       <NavLink to="/recon" className={navClass}><span className="ic">⚖️</span>Reconciliation</NavLink>
       <NavLink to="/audit" className={navClass}><span className="ic">🛡️</span>Risk &amp; Audit Trail</NavLink>

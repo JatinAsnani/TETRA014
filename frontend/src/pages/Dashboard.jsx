@@ -17,6 +17,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData()
+    const handleDataChanged = () => fetchDashboardData()
+    window.addEventListener('app_data_changed', handleDataChanged)
+    return () => window.removeEventListener('app_data_changed', handleDataChanged)
   }, [])
 
   const fetchDashboardData = async () => {
@@ -141,7 +144,7 @@ export default function Dashboard() {
       <div className="card card-pad border border-slate-700/80">
         <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
           <div className="section-title">Invoice Risk &amp; Audit Snapshot</div>
-          <Link to="/invoice-risk-scanner" className="btn small secondary">Open Risk Scanner →</Link>
+          <Link to="/scan" className="btn small secondary">Open Risk Scanner →</Link>
         </div>
         <div className="p-4 text-xs text-slate-400">
           Ready for document upload and audit verification.
