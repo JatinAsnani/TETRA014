@@ -1,8 +1,5 @@
-"""
-MongoDB Atlas Database Connection & Sync Manager
-Handles connecting to MongoDB Atlas clusters (mongodb+srv://...)
-and syncing application models & collections.
-"""
+# NOTE: Inactive/Legacy Code. The application currently runs on SQLAlchemy + SQLite (database.py, friday.db).
+# Do not use this file for active datastore connections.
 
 import os
 from typing import Optional, Any
@@ -15,11 +12,10 @@ _mongo_db = None
 
 
 def get_mongo_uri() -> str:
-    """Retrieve MongoDB Atlas connection string from environment."""
-    return os.getenv(
-        "MONGODB_URI",
-        "mongodb+srv://jatinasnani03_db_user:EOcQK8kjBycePKX2@friday.zykyjos.mongodb.net/tallai?retryWrites=true&w=majority&appName=friday"
-    ).strip()
+    """Retrieve MongoDB Atlas connection string from environment.
+    No hardcoded fallback — if MONGODB_URI isn't set, callers must handle None/empty.
+    """
+    return os.getenv("MONGODB_URI", "").strip()
 
 
 def get_mongo_db_name() -> str:

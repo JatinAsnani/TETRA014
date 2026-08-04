@@ -1,15 +1,15 @@
-"""
-init_mongo.py — Initialize collections and indexes in MongoDB Atlas (tallai)
-"""
+# NOTE: Inactive/Legacy Code. The application currently runs on SQLAlchemy + SQLite (database.py, friday.db).
+# Do not run or rely on this script for active setup.
+
 import os
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-MONGODB_URI = os.getenv(
-    "MONGODB_URI",
-    "mongodb+srv://jatinasnani03_db_user:EOcQK8kjBycePKX2@friday.zykyjos.mongodb.net/tallai?retryWrites=true&w=majority&appName=friday"
-)
+MONGODB_URI = os.getenv("MONGODB_URI")
+if not MONGODB_URI:
+    raise RuntimeError("MONGODB_URI is not set in the environment (.env)")
+
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "tallai")
 
 def initialize_mongodb():
