@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { uploadInvoice } from '../../api/invoiceRiskApi'
+import { uploadInvoice, uploadInvoiceCsv } from '../../api/invoiceRiskApi'
 import { mockSampleInvoices } from '../../api/mockInvoiceRiskData'
 
 export default function UploadPanel({ onInvoiceExtracted }) {
@@ -35,11 +35,29 @@ export default function UploadPanel({ onInvoiceExtracted }) {
   const [pendingFile, setPendingFile] = useState(null)
 
   const processFile = async (file, forceOffline = false) => {
+    if (!file) return;
+    const filename = file.name || '';
+    const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+    const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.csv'];
+    if (!allowed.includes(ext)) {
+      setLoading(false);
+      setErrorMsg({
+        text: `Unsupported File Format: ${ext || 'unknown'}. Only PDF, JPG/PNG, and CSV formats are supported.`,
+        isNetworkError: false
+      });
+      return;
+    }
+
     setLoading(true)
     setErrorMsg(null)
     setPendingFile(file)
     try {
-      const extracted = await uploadInvoice(file, forceOffline)
+      let extracted
+      if (ext === '.csv') {
+        extracted = await uploadInvoiceCsv(file)
+      } else {
+        extracted = await uploadInvoice(file, forceOffline)
+      }
       setPendingFile(null)
       onInvoiceExtracted(extracted)
     } catch (err) {
@@ -119,7 +137,7 @@ export default function UploadPanel({ onInvoiceExtracted }) {
             </div>
             <div>
               <h3 className="risk-scanner-text-main font-bold text-lg">Drag & Drop Invoice Document</h3>
-              <p className="text-slate-400 text-xs mt-1">Supports PDF, JPG/PNG, Excel (.xls/.xlsx), CSV, Word (.doc/.docx)</p>
+              <p className="text-slate-400 text-xs mt-1">Supports PDF, JPG/PNG, and CSV formats</p>
             </div>
             
             <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 mt-2">
@@ -127,7 +145,7 @@ export default function UploadPanel({ onInvoiceExtracted }) {
               <input 
                 type="file" 
                 className="hidden" 
-                accept=".pdf,.jpg,.jpeg,.png,.xls,.xlsx,.csv,.doc,.docx"
+                accept=".pdf,.jpg,.jpeg,.png,.csv"
                 onChange={handleFileInput}
               />
             </label>
