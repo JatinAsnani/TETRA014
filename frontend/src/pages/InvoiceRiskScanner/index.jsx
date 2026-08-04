@@ -138,11 +138,93 @@ export default function InvoiceRiskScanner() {
         {activeTab === 'upload' && (
           <div className="space-y-6">
             {extractedData ? (
-              <ExtractedFieldsEditor
-                extractedData={extractedData}
-                onConfirm={handleConfirmFields}
-                onCancel={() => setExtractedData(null)}
-              />
+              extractedData.imported_count !== undefined ? (
+                /* CSV Import Summary Card */
+                <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 shadow-xl space-y-6">
+                  {extractedData.isFallback && (
+                    <div className="bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs px-4 py-3 rounded-xl flex items-center gap-2">
+                      <span>⚠</span>
+                      <span>Sample data — backend unavailable.</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between border-b border-slate-700/80 pb-4">
+                    <div>
+                      <h2 className="text-white font-bold text-lg">CSV Import Summary</h2>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Your CSV file has been processed. Valid rows have been added directly to the database.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setExtractedData(null)}
+                      className="text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
+                    >
+                      Upload Another
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-900/60 border border-slate-700/60 p-4 rounded-xl text-center">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Imported Rows</span>
+                      <div className="text-emerald-400 font-black text-2xl mt-1">{extractedData.imported_count}</div>
+                    </div>
+                    <div className="bg-slate-900/60 border border-slate-700/60 p-4 rounded-xl text-center">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Skipped Rows</span>
+                      <div className="text-rose-400 font-black text-2xl mt-1">{extractedData.skipped_count}</div>
+                    </div>
+                    <div className="bg-slate-900/60 border border-slate-700/60 p-4 rounded-xl text-center">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Value Imported</span>
+                      <div className="text-white font-black text-2xl font-mono mt-1">₹{extractedData.total_amount.toLocaleString('en-IN')}</div>
+                    </div>
+                  </div>
+
+                  {extractedData.errors && extractedData.errors.length > 0 && (
+                    <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-3">
+                      <h4 className="text-white font-semibold text-xs flex items-center gap-2">
+                        <span>⚠️</span> Skipped Rows Log ({extractedData.errors.length} Issues)
+                      </h4>
+                      <div className="overflow-y-auto max-h-48">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-800 text-slate-300 font-semibold border-b border-slate-700">
+                            <tr>
+                              <th className="py-2 px-3">CSV Row #</th>
+                              <th className="py-2 px-3">Reason / Description</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800 text-white">
+                            {extractedData.errors.map((err, idx) => (
+                              <tr key={idx} className="hover:bg-slate-800/40">
+                                <td className="py-2 px-3 font-mono text-slate-400">{err.row}</td>
+                                <td className="py-2 px-3 text-rose-300">{err.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-end pt-4 border-t border-slate-700/80">
+                    <button
+                      onClick={() => {
+                        setExtractedData(null);
+                        setRefreshCounter(prev => prev + 1);
+                        setActiveTab('exceptions');
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-5 py-2.5 rounded-lg shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5"
+                    >
+                      <span>🚨</span>
+                      <span>Go to Exception Dashboard</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <ExtractedFieldsEditor
+                  extractedData={extractedData}
+                  onConfirm={handleConfirmFields}
+                  onCancel={() => setExtractedData(null)}
+                />
+              )
             ) : (
               <UploadPanel onInvoiceExtracted={handleInvoiceExtracted} />
             )}
