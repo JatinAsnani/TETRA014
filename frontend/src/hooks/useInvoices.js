@@ -43,6 +43,15 @@ export function useInvoices(filters = {}) {
     }
   }, [JSON.stringify(filters)])
 
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => {
+    fetch()
+    const handleDataChanged = () => fetch()
+    window.addEventListener('app_data_changed', handleDataChanged)
+    window.addEventListener('invoice_created', handleDataChanged)
+    return () => {
+      window.removeEventListener('app_data_changed', handleDataChanged)
+      window.removeEventListener('invoice_created', handleDataChanged)
+    }
+  }, [fetch])
   return { ...data, loading, refetch: fetch }
 }

@@ -166,3 +166,36 @@ async def get_outstanding_from_ai(tool_input: dict, user_id: int, db) -> dict:
     if not customer:
         return {"error": f"Customer '{party_name}' not found"}
     return {"party_name": customer.name, "party_type": "customer", "outstanding": float(customer.outstanding)}
+
+
+async def create_customer_from_ai(tool_input: dict, user_id: int, db) -> dict:
+    from deps import get_org_id
+    user_obj = db.query(models.User).filter(models.User.id == user_id).first() or db.query(models.User).first()
+    org_id = get_org_id(user_obj, db) if user_obj else user_id
+
+    name = tool_input.get("name") or tool_input.get("customer_name") or "New Customer"
+    phone = tool_input.get("phone", "9876543210")
+    email = tool_input.get("email", f"{name.lower().replace(' ', '')}@gmail.com")
+    city = tool_input.get("city", "Ahmedabad")
+    state = tool_input.get("state", "Gujarat")
+
+    existing = db.query(models.Customer).filter(
+        models.Customer.name.ilike(f"%{name}%")
+    ).first()
+
+    if not existing:
+        customer = models.Customer(
+            user_id=org_id,
+            name=name,
+            phone=phone,
+            email=email,
+            city=city,
+            state=state,
+            outstanding=0
+        )
+        db.add(customer)
+        db.commit()
+        db.refresh(customer)
+        existing = customer
+
+    return {"customer_id": existing.id, "name": existing.name, "message": f"Customer '{existing.name}' created successfully!"}

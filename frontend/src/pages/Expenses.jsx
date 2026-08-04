@@ -24,6 +24,13 @@ export default function Expenses() {
 
   useEffect(() => {
     fetchExpenses()
+    const handleDataChanged = () => fetchExpenses()
+    window.addEventListener('app_data_changed', handleDataChanged)
+    window.addEventListener('expense_created', handleDataChanged)
+    return () => {
+      window.removeEventListener('app_data_changed', handleDataChanged)
+      window.removeEventListener('expense_created', handleDataChanged)
+    }
   }, [selectedCategory])
 
   const fetchExpenses = async () => {

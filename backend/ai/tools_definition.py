@@ -2,8 +2,21 @@
 Gemini tool definitions for function calling.
 Exports both genai.protos (if available) and REST API compatible dict declarations.
 """
-
 REST_FUNCTION_DECLARATIONS = [
+    {
+        "name": "create_customer",
+        "description": "Create a new customer in the system. e.g. 'Adu naam ka customer add kar', 'new customer Ramesh'",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "name": {"type": "STRING", "description": "Customer name"},
+                "phone": {"type": "STRING"},
+                "city": {"type": "STRING"},
+                "state": {"type": "STRING"}
+            },
+            "required": ["name"]
+        }
+    },
     {
         "name": "create_invoice",
         "description": "Create a sales invoice for a customer. Use when user wants to make a bill or invoice. e.g. 'Raj Traders ke liye 50 bags cement ka invoice banao'",

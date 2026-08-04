@@ -23,6 +23,9 @@ export default function Customers() {
 
   useEffect(() => {
     fetchCustomers()
+    const handleCustomerCreated = () => fetchCustomers()
+    window.addEventListener('customer_created', handleCustomerCreated)
+    return () => window.removeEventListener('customer_created', handleCustomerCreated)
   }, [search])
 
   const fetchCustomers = async () => {
