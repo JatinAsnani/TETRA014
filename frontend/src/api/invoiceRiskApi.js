@@ -147,3 +147,25 @@ export async function seedSyntheticDataset() {
     return { message: 'Synthetic dataset pre-loaded locally!' }
   }
 }
+
+export async function uploadInvoiceCsv(file) {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post('/invoice-risk/upload-csv', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return res.data
+  } catch (err) {
+    toast.error('Offline fallback used — backend unreachable. This is sample data, not real extraction.')
+    return {
+      imported_count: 3,
+      skipped_count: 1,
+      total_amount: 45000.00,
+      errors: [
+        { row: 4, reason: "missing GSTIN" }
+      ],
+      isFallback: true
+    }
+  }
+}
