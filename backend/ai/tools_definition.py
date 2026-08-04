@@ -166,31 +166,3 @@ REST_FUNCTION_DECLARATIONS = [
     }
 ]
 
-GEMINI_TOOLS = None
-try:
-    import google.generativeai as genai
-    _function_declarations = [
-        genai.protos.FunctionDeclaration(
-            name=d["name"],
-            description=d["description"],
-            parameters=genai.protos.Schema(
-                type=genai.protos.Type.OBJECT,
-                properties={
-                    k: genai.protos.Schema(
-                        type=genai.protos.Type.ARRAY if v.get("type") == "ARRAY" else (
-                            genai.protos.Type.NUMBER if v.get("type") == "NUMBER" else (
-                                genai.protos.Type.INTEGER if v.get("type") == "INTEGER" else genai.protos.Type.STRING
-                            )
-                        ),
-                        description=v.get("description", "")
-                    )
-                    for k, v in d["parameters"]["properties"].items()
-                },
-                required=d["parameters"].get("required", [])
-            )
-        )
-        for d in REST_FUNCTION_DECLARATIONS
-    ]
-    GEMINI_TOOLS = genai.protos.Tool(function_declarations=_function_declarations)
-except Exception:
-    GEMINI_TOOLS = None
