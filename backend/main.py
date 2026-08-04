@@ -31,10 +31,12 @@ if frontend_url:
         if stripped and stripped not in origins:
             origins.append(stripped)
 
+# CORS configuration: Allow explicit origins; regex is limited to localhost to avoid wildcard subdomains.
+# Credentials are allowed to support standard authentication handshakes.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https?://.*\.vercel\.app|https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",  # Removed wildcard *.vercel.app for security; use FRONTEND_URL instead.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
