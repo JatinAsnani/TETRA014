@@ -22,7 +22,7 @@ def get_model(tools=None, system_instruction=None):
     try:
         genai.configure(api_key=api_key)
         return genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.5-flash",
             tools=tools,
             system_instruction=system_instruction,
         )
@@ -39,7 +39,7 @@ def get_plain_model():
     try:
         genai.configure(api_key=api_key)
         return genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.5-flash",
             system_instruction=(
                 "You are FRIDAY, an intelligent accounting assistant for Indian small businesses. "
                 "Reply in the same language the user used (Hindi/Hinglish or English). "

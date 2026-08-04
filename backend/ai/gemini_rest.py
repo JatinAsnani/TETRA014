@@ -12,7 +12,16 @@ def is_configured():
     key = get_api_key()
     return bool(key and key != "YOUR_GEMINI_API_KEY_HERE")
 
-PREFERRED_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-2.0-flash-lite", "gemini-1.5-flash-8b"]
+PREFERRED_MODELS = [
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash-8b"
+]
 
 def generate_content_rest(prompt: str, system_instruction: str = None) -> str:
     """Send a prompt to Gemini via REST API with model fallback."""
